@@ -292,20 +292,22 @@ button.pf-native-answer {
 }
 
 button.pf-native-answer .nobold {
+  display: none !important;
+}
+
+button.pf-native-answer::after {
   position: absolute;
   right: 0;
   bottom: clamp(4px, calc(var(--pf-native-height) * .1), 7px);
   left: 0;
-  display: block !important;
-  margin: 0;
+  display: block;
+  content: attr(data-pf-interval);
   color: var(--pf-native-secondary) !important;
-  font-size: clamp(9px, calc(6.1px + var(--pf-native-height) * .085), 12px) !important;
+  font-size: clamp(10px, calc(6.5px + var(--pf-native-height) * .1), 13px) !important;
   font-weight: 520 !important;
   line-height: 1 !important;
   pointer-events: none;
 }
-
-button.pf-native-answer .nobold br { display: none; }
 
 button.pf-native-ease-1 {
   border-color: color-mix(in srgb, var(--pf-native-danger) 28%, transparent) !important;

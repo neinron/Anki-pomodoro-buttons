@@ -176,7 +176,9 @@
       middle.dataset.answerCount = String(answerButtons.length);
       answerButtons.forEach((button) => {
         const ease = answerEase(button);
+        const interval = button.querySelector(".nobold");
         button.dataset.ease = String(ease);
+        button.dataset.pfInterval = interval ? interval.textContent.trim() : "";
         button.classList.add(
           "pf-native-control",
           "pf-native-answer",
