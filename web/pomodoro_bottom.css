@@ -318,27 +318,32 @@ button.pf-native-answer-interval {
 
 button.pf-native-ease-1 {
   border-color: color-mix(in srgb, var(--pf-native-danger) 28%, transparent) !important;
+  background-color: color-mix(in srgb, var(--pf-native-danger) 12%, var(--pf-native-glass)) !important;
   color: var(--pf-native-danger) !important;
 }
 
 button.pf-native-ease-2 {
   border-color: color-mix(in srgb, var(--pf-native-break) 28%, transparent) !important;
+  background-color: color-mix(in srgb, var(--pf-native-break) 12%, var(--pf-native-glass)) !important;
   color: var(--pf-native-break) !important;
 }
 
 button.pf-native-ease-3 {
   border-color: color-mix(in srgb, var(--pf-native-focus) 28%, transparent) !important;
+  background-color: color-mix(in srgb, var(--pf-native-focus) 12%, var(--pf-native-glass)) !important;
   color: var(--pf-native-focus) !important;
 }
 
 button.pf-native-ease-4 {
   border-color: color-mix(in srgb, var(--pf-native-blue) 28%, transparent) !important;
+  background-color: color-mix(in srgb, var(--pf-native-blue) 12%, var(--pf-native-glass)) !important;
   color: var(--pf-native-blue) !important;
 }
 
 .pf-native-middle[data-answer-count="2"] button.pf-native-ease-2,
 .pf-native-middle[data-answer-count="3"] button.pf-native-ease-2 {
   border-color: color-mix(in srgb, var(--pf-native-focus) 28%, transparent) !important;
+  background-color: color-mix(in srgb, var(--pf-native-focus) 12%, var(--pf-native-glass)) !important;
   color: var(--pf-native-focus) !important;
 }
 
