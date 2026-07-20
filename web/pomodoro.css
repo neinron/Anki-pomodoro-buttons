@@ -49,7 +49,6 @@
   --pf-review-square-radius: clamp(13px, calc(var(--pf-review-height) * .36), 23px);
   --pf-review-label-size: clamp(13px, calc(9.4px + var(--pf-review-height) * .1), 16px);
   --pf-review-number-size: clamp(13px, calc(7.2px + var(--pf-review-height) * .16), 18px);
-  --pf-review-timer-size: clamp(15px, calc(10.6px + var(--pf-review-height) * .12), 19px);
   --pf-review-caption-size: clamp(9px, calc(6.1px + var(--pf-review-height) * .085), 12px);
   --pf-review-icon-size: clamp(18px, calc(11px + var(--pf-review-height) * .23), 25px);
   --pf-liquid-highlight: rgba(255, 255, 255, .7);
@@ -274,11 +273,15 @@ html.nightMode .pf-shell,
 }
 
 .pf-review-utility {
+  box-sizing: border-box;
+  flex: 0 0 var(--pf-review-height);
   width: var(--pf-review-height);
   min-width: var(--pf-review-height);
+  max-width: var(--pf-review-height);
   padding: 0;
-  border-radius: 50%;
+  border-radius: 999px !important;
   corner-shape: round;
+  overflow: hidden;
 }
 
 .pf-sf-symbol {
@@ -324,10 +327,6 @@ html.nightMode .pf-shell,
   corner-shape: round;
   transition: border-color 160ms ease, box-shadow 160ms ease;
   cursor: default;
-}
-
-.pf-review-counts[hidden] {
-  display: none;
 }
 
 .pf-review-count-card {
@@ -424,18 +423,21 @@ html.nightMode .pf-shell,
 
 .pf-review-timer {
   position: relative;
-  flex: 0 0 96px;
-  width: 96px;
-  min-width: 96px;
-  padding: 0 12px;
+  box-sizing: border-box;
+  flex: 0 0 var(--pf-review-height);
+  width: var(--pf-review-height);
+  min-width: var(--pf-review-height);
+  max-width: var(--pf-review-height);
+  padding: 0;
   overflow: hidden;
+  border-radius: 999px !important;
   font-variant-numeric: tabular-nums;
 }
 
 .pf-review-time {
   position: relative;
   z-index: 1;
-  font-size: var(--pf-review-timer-size);
+  font-size: clamp(13px, calc(7px + var(--pf-review-height) * .2), 20px);
   font-weight: 700;
   line-height: 1;
   letter-spacing: -.35px;
@@ -445,9 +447,8 @@ html.nightMode .pf-shell,
   position: absolute;
   top: 50%;
   left: 50%;
-  display: none;
-  width: min(calc(var(--pf-review-height) * .78), 50px);
-  height: min(calc(var(--pf-review-height) * .78), 50px);
+  width: min(calc(var(--pf-review-height) * .72), 46px);
+  height: min(calc(var(--pf-review-height) * .72), 46px);
   overflow: visible;
   transform: translate(-50%, -50%);
 }
@@ -469,23 +470,6 @@ html.nightMode .pf-shell,
   transition: stroke-dasharray 500ms linear, stroke 160ms ease;
 }
 
-.pf-review-timer[data-indicator="circle"] {
-  flex-basis: var(--pf-review-height);
-  width: var(--pf-review-height);
-  min-width: var(--pf-review-height);
-  padding: 0;
-  border-radius: 50%;
-  corner-shape: round;
-}
-
-.pf-review-timer[data-indicator="circle"] .pf-review-time {
-  font-size: clamp(13px, calc(7px + var(--pf-review-height) * .2), 20px);
-  letter-spacing: -.35px;
-}
-
-.pf-review-timer[data-indicator="circle"] .pf-review-ring { display: block; }
-.pf-review-timer[data-indicator="hidden"] .pf-review-ring { display: none; }
-
 .pf-review-timer[data-state="running"][data-phase="focus"] .pf-review-ring-fill { stroke: var(--pf-focus); }
 .pf-review-timer[data-state="running"][data-phase="short_break"] .pf-review-ring-fill,
 .pf-review-timer[data-state="running"][data-phase="long_break"] .pf-review-ring-fill { stroke: var(--pf-break); }
@@ -505,7 +489,6 @@ html.nightMode .pf-shell,
   .pf-review-utility { width: var(--pf-review-height); min-width: var(--pf-review-height); padding: 0; }
   .pf-review-counts { width: auto; gap: 2px; }
   .pf-review-answer { width: 82px; min-width: 82px; padding: 0 8px; }
-  .pf-review-timer { flex-basis: 82px; width: 82px; min-width: 82px; }
 }
 
 @media (max-width: 900px) {
@@ -513,7 +496,6 @@ html.nightMode .pf-shell,
   .pf-review-edge, .pf-review-actions { gap: 4px; }
   .pf-review-utility { width: var(--pf-review-height); min-width: var(--pf-review-height); padding: 0; }
   .pf-review-answer { width: 76px; min-width: 76px; padding-right: 6px; padding-left: 6px; font-size: 12px; }
-  .pf-review-timer { flex-basis: 76px; width: 76px; min-width: 76px; padding-right: 9px; padding-left: 9px; }
 }
 
 .pf-answer-bar-settings {
@@ -1051,7 +1033,7 @@ input[type="number"].pf-setting-control {
   border: 0;
   color: var(--pf-text);
   font: inherit;
-  cursor: pointer;
+  cursor: default;
 }
 
 .pf-select-trigger {

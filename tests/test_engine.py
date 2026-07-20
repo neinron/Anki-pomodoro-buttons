@@ -27,10 +27,7 @@ def short_config(**overrides):
         "focus_hide": True,
         "completion_sound": False,
         "daily_goal": 4,
-        "card_size": 96,
-        "progress_style": "line",
         "answer_button_height": 44,
-        "answer_timer_style": "line",
     }
     config.update(overrides)
     return config
@@ -210,47 +207,15 @@ class TimerEngineTests(unittest.TestCase):
         self.assertEqual(engine.pause_reason, "app_inactive")
         self.assertEqual(engine.session_answer_count, 5)
 
-    def test_card_size_is_clamped_and_does_not_change_timer(self):
-        engine = TimerEngine(short_config(card_size=20), now_wall=NOW)
-        self.assertEqual(engine.config["card_size"], 50)
-        engine.start(0, NOW)
-        engine.tick(15, NOW)
-        result = engine.apply_settings({"card_size": 200}, 15, NOW)
-        self.assertEqual(result, "settings_updated")
-        self.assertEqual(engine.config["card_size"], 144)
-        self.assertAlmostEqual(engine.remaining_seconds, 45)
-
-    def test_progress_style_is_normalized_and_does_not_change_timer(self):
-        engine = TimerEngine(short_config(progress_style="invalid"), now_wall=NOW)
-        self.assertEqual(engine.config["progress_style"], "line")
-        engine.start(0, NOW)
-        engine.tick(15, NOW)
-        result = engine.apply_settings({"progress_style": "circle"}, 15, NOW)
-        self.assertEqual(result, "settings_updated")
-        self.assertEqual(engine.config["progress_style"], "circle")
-        self.assertAlmostEqual(engine.remaining_seconds, 45)
-
-    def test_answer_bar_settings_are_normalized_and_do_not_change_timer(self):
-        engine = TimerEngine(
-            short_config(answer_button_height=10, answer_timer_style="invalid"),
-            now_wall=NOW,
-        )
+    def test_answer_bar_height_is_normalized_and_does_not_change_timer(self):
+        engine = TimerEngine(short_config(answer_button_height=10), now_wall=NOW)
         self.assertEqual(engine.config["answer_button_height"], 36)
-        self.assertEqual(engine.config["answer_timer_style"], "line")
         engine.start(0, NOW)
         engine.tick(15, NOW)
-        result = engine.apply_settings(
-            {"answer_button_height": 100, "answer_timer_style": "circle"},
-            15,
-            NOW,
-        )
+        result = engine.apply_settings({"answer_button_height": 100}, 15, NOW)
         self.assertEqual(result, "settings_updated")
         self.assertEqual(engine.config["answer_button_height"], 64)
-        self.assertEqual(engine.config["answer_timer_style"], "circle")
         self.assertAlmostEqual(engine.remaining_seconds, 45)
-
-        engine.apply_settings({"answer_timer_style": "hidden"}, 15, NOW)
-        self.assertEqual(engine.config["answer_timer_style"], "hidden")
 
     def test_rating_resumes_away_pause_and_is_counted(self):
         engine = TimerEngine(short_config(focus_minutes=5), now_wall=NOW)

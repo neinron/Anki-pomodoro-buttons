@@ -4,8 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pomodoro Focus UI Harness</title>
-  <link rel="stylesheet" href="../web/pomodoro.css?v=29">
-  <link rel="stylesheet" href="../web/pomodoro_bottom.css?v=12">
+  <link rel="stylesheet" href="../web/pomodoro.css?v=32">
   <style>
     body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f2f3f5; color: #17181a; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
     main { width: min(720px, 78vw); text-align: center; }
@@ -42,7 +41,7 @@
       remaining_seconds: 1382, duration_seconds: 1500, progress: 0.921,
       elapsed_seconds: 118, round_index: 2, round_total: 4, answer_count: 12,
       completion: null,
-      config: { preset: "classic", focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_after: 4, idle_autopause_enabled: true, idle_minutes: 2, focus_hide: true, completion_sound: true, daily_goal: 4, card_size: 96, progress_style: "line", answer_button_height: 44, answer_timer_style: "line" },
+      config: { preset: "classic", focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_after: 4, idle_autopause_enabled: true, idle_minutes: 2, focus_hide: true, completion_sound: true, daily_goal: 4, answer_button_height: 44 },
       position: { x: .94, y: .06 },
       daily: {
         today: { completed: 2, incomplete: 0, answers: 84, goal: 4, goal_met: false },
@@ -67,16 +66,6 @@
       document.getElementById("middle").innerHTML = html;
     };
     if (params.get("side") === "question") showNativeActions(questionActionsHtml);
-    const requestedSize = Number(params.get("size"));
-    if (Number.isFinite(requestedSize) && requestedSize >= 50 && requestedSize <= 144) {
-      mock.config.card_size = requestedSize;
-    }
-    if (params.get("style") === "circle" || params.get("style") === "line") {
-      mock.config.progress_style = params.get("style");
-    }
-    if (["line", "circle", "hidden"].includes(params.get("answerTimer"))) {
-      mock.config.answer_timer_style = params.get("answerTimer");
-    }
     const requestedButtonHeight = Number(params.get("buttonHeight"));
     if (Number.isFinite(requestedButtonHeight) && requestedButtonHeight >= 36 && requestedButtonHeight <= 64) {
       mock.config.answer_button_height = requestedButtonHeight;
@@ -161,8 +150,6 @@
       if (payload.action === "update_settings") Object.assign(mock.config, payload.settings);
       if (payload.action === "study_actions") window.PomodoroFocus?.setStudyActions(payload.layout);
       if (payload.action === "show_answer") showNativeActions(answerActionsHtml);
-      if (payload.action === "move") mock.position = { x: payload.x, y: payload.y };
-      if (payload.action === "reset_position") mock.position = { x: .94, y: .06 };
       if (payload.action === "open_panel") window.PomodoroFocus?.openPanel();
       if (payload.action === "ready_bottom" && params.get("ignoreReady") !== "1") {
         window.PomodoroFocus?.setAnswerBarMode(true);
@@ -173,8 +160,8 @@
       }, 0);
     };
   </script>
-  <script src="../web/pomodoro.js?v=29"></script>
-  <script src="../web/pomodoro_bottom.js?v=12"></script>
+  <script src="../web/pomodoro.js?v=32"></script>
+  <script src="../web/pomodoro_bottom.js?v=14"></script>
   <script>
     if (params.get("signal") === "focus-complete") {
       setTimeout(() => window.PomodoroFocus?.signalFocusComplete(), 180);

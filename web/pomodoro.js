@@ -4,37 +4,7 @@
   if (window.PomodoroFocus) return;
 
   const PREFIX = "pomodoro_focus:";
-  const DEFAULT_CARD_SIZE = 96;
-  const MIN_CARD_SIZE = 50;
-  const MAX_CARD_SIZE = 144;
   const VIEW_MARGIN = 12;
-  const HIDE_DELAY = 3000;
-  const RING_CENTER = 50;
-  const RING_RADIUS = 41.5;
-  const RING_START_DEGREES = 112.5;
-  const RING_SWEEP_DEGREES = 315;
-  const LINE_REFERENCE_CARD_SIZE = 112;
-  const LINE_REFERENCE_FONT_SIZE = 67;
-  const CIRCLE_REFERENCE_CARD_SIZE = 112;
-  const CIRCLE_REFERENCE_FONT_SIZE = 45;
-
-  function ringPoint(degrees) {
-    const radians = degrees * Math.PI / 180;
-    return {
-      x: RING_CENTER + RING_RADIUS * Math.cos(radians),
-      y: RING_CENTER + RING_RADIUS * Math.sin(radians),
-    };
-  }
-
-  function ringArcPath(progress) {
-    const normalized = Math.max(0, Math.min(1, Number(progress) || 0));
-    if (normalized === 0) return "";
-    const sweep = RING_SWEEP_DEGREES * normalized;
-    const start = ringPoint(RING_START_DEGREES);
-    const end = ringPoint(RING_START_DEGREES + sweep);
-    const largeArc = sweep > 180 ? 1 : 0;
-    return `M ${start.x} ${start.y} A ${RING_RADIUS} ${RING_RADIUS} 0 ${largeArc} 1 ${end.x} ${end.y}`;
-  }
 
   const icons = {
     play: '<polygon points="6 3 20 12 6 21 6 3"></polygon>',
@@ -49,7 +19,6 @@
     eye: '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path><circle cx="12" cy="12" r="2.5"></circle>',
     target: '<circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle>',
     chart: '<path d="M4 19V9"></path><path d="M10 19V5"></path><path d="M16 19v-7"></path><path d="M22 19H2"></path>',
-    move: '<path d="M12 2v20M2 12h20"></path><path d="m8 6 4-4 4 4M8 18l4 4 4-4M6 8l-4 4 4 4M18 8l4 4-4 4"></path>',
     trash: '<path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="m19 6-1 15H6L5 6"></path><path d="M10 11v5M14 11v5"></path>',
     chevron: '<path d="m9 18 6-6-6-6"></path>',
     chevronDown: '<path d="m6 9 6 6 6-6"></path>',
@@ -88,29 +57,11 @@
       label: `${index + 1} min`,
     })),
   ];
-  const progressStyleOptions = [
-    { value: "line", label: "Line" },
-    { value: "circle", label: "Circle" },
-  ];
-  const answerTimerStyleOptions = [
-    { value: "line", label: "Time only" },
-    { value: "circle", label: "Circle" },
-  ];
-
   let snapshot = null;
   let panelOpen = false;
   let historyOpen = false;
-  let hideTimer = null;
   let completionSignalTimer = null;
   let lastActivitySent = 0;
-  let lastHideKey = "";
-  let dragging = null;
-  let activeCardSize = DEFAULT_CARD_SIZE;
-  let activeProgressStyle = "line";
-  let activeMinuteBoxWidth = 64;
-  let activeMinuteBoxHeight = 76;
-  let displayedMinutes = 25;
-  let answerBarMode = true;
   let studyActions = null;
   let liquidGlassFrame = null;
   const liquidFilterCache = new Map();
@@ -121,17 +72,6 @@
 
   root.innerHTML = `
     <div class="pf-shell pf-answer-bar-mode">
-      <button class="pf-card" id="pf-card" type="button" aria-label="Open Pomodoro Focus" title="Pomodoro Focus">
-        <span class="pf-minute-box" id="pf-minute">25</span>
-        <span class="pf-card-progress-track" aria-hidden="true">
-          <span class="pf-card-progress" id="pf-card-progress"></span>
-        </span>
-        <svg class="pf-card-progress-ring" viewBox="0 0 100 100" aria-hidden="true">
-          <path class="pf-card-ring-track" d="${ringArcPath(1)}"></path>
-          <path class="pf-card-ring-progress" id="pf-card-ring-progress"></path>
-        </svg>
-      </button>
-
       <svg class="pf-liquid-definitions" aria-hidden="true" focusable="false">
         <defs id="pf-liquid-filter-defs"></defs>
       </svg>
@@ -139,13 +79,13 @@
       <div class="pf-review-bar" id="pf-review-bar" aria-label="Review controls">
         <div class="pf-review-edge pf-review-left">
           <button class="pf-review-control pf-review-timer" id="pf-review-timer" type="button" aria-label="Open Pomodoro Focus">
-            <span class="pf-review-time">25:00</span>
+            <span class="pf-review-time">25</span>
             <svg class="pf-review-ring" viewBox="0 0 40 40" aria-hidden="true">
               <circle class="pf-review-ring-track" pathLength="100" cx="20" cy="20" r="16"></circle>
               <circle class="pf-review-ring-fill" pathLength="100" cx="20" cy="20" r="16"></circle>
             </svg>
           </button>
-          <div class="pf-review-counts" id="pf-review-counts" aria-label="New, learning, and review card counts" hidden>
+          <div class="pf-review-counts" id="pf-review-counts" aria-label="New, learning, and review card counts">
             <span class="pf-review-count-card pf-review-new" id="pf-review-new" title="New cards"></span>
             <span class="pf-review-count-card pf-review-learn" id="pf-review-learn" title="Learning cards"></span>
             <span class="pf-review-count-card pf-review-due" id="pf-review-due" title="Review cards"></span>
@@ -255,32 +195,11 @@
               <span class="pf-setting-label">7-day history</span>
               <span class="pf-row-value" id="pf-history-chevron">${icon("chevron")}</span>
             </button>
-            <button class="pf-row-button" id="pf-reset-position" type="button">
-              <span class="pf-setting-icon">${icon("move")}</span>
-              <span class="pf-setting-label">Reset card position</span>
-              <span class="pf-row-value">Reset</span>
-            </button>
             <button class="pf-row-button pf-danger" id="pf-clear-history" type="button">
               <span class="pf-setting-icon">${icon("trash")}</span>
               <span class="pf-setting-label">Clear history</span>
               <span class="pf-row-value">Clear</span>
             </button>
-          </div>
-
-          <div class="pf-settings pf-size-settings">
-            <div class="pf-setting-row">
-              <span class="pf-setting-icon">${icon("circle")}</span>
-              <span class="pf-setting-label">Progress style</span>
-              ${customSelect("pf-progress-style", "Progress style", "line", progressStyleOptions)}
-            </div>
-            <div class="pf-setting-row">
-              <span class="pf-setting-icon">${icon("maximize")}</span>
-              <span class="pf-setting-label">Card size</span>
-              <div class="pf-size-control">
-                <input id="pf-card-size" type="range" min="50" max="144" step="2" value="96" aria-label="Card size in pixels">
-                <output id="pf-card-size-value" for="pf-card-size">96 px</output>
-              </div>
-            </div>
           </div>
 
           <div class="pf-history" id="pf-history">
@@ -289,11 +208,6 @@
           </div>
 
           <div class="pf-settings pf-answer-bar-settings">
-            <div class="pf-setting-row">
-              <span class="pf-setting-icon">${icon("circle")}</span>
-              <span class="pf-setting-label">Timer indicator</span>
-              ${customSelect("pf-answer-timer-style", "Answer bar timer indicator", "line", answerTimerStyleOptions)}
-            </div>
             <div class="pf-setting-row">
               <span class="pf-setting-icon">${icon("maximize")}</span>
               <span class="pf-setting-label">Button height</span>
@@ -320,7 +234,6 @@
     </div>`;
 
   const $ = (selector) => root.querySelector(selector);
-  const card = $("#pf-card");
   const panel = $("#pf-panel");
   const confirmLayer = $("#pf-confirm");
   let confirmAction = null;
@@ -420,7 +333,7 @@
         || CSS.supports("-webkit-backdrop-filter", "url(#pf-liquid-probe)"));
     const shell = $(".pf-shell");
     shell.classList.toggle("pf-liquid-svg-supported", supportsSvgBackdrop);
-    if (!supportsSvgBackdrop || !answerBarMode) return;
+    if (!supportsSvgBackdrop) return;
 
     root.querySelectorAll(".pf-review-control, .pf-review-counts").forEach((element) => {
       const bounds = element.getBoundingClientRect();
@@ -571,71 +484,6 @@
     });
   }
 
-  function clampCardSize(value) {
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) return DEFAULT_CARD_SIZE;
-    return Math.max(MIN_CARD_SIZE, Math.min(MAX_CARD_SIZE, parsed));
-  }
-
-  function applyCardSize(value) {
-    activeCardSize = clampCardSize(value);
-    const shell = $(".pf-shell");
-    const cardRadius = Math.max(12, Math.min(20, activeCardSize * 0.134));
-    const progressInset = activeCardSize * (12 / 112);
-    const progressHeight = activeCardSize * (15 / 112);
-    const lineGap = 0;
-    const ringStroke = Math.max(5, Math.min(8, activeCardSize * 0.0714));
-    const ringInnerRadius = activeCardSize * (RING_RADIUS / 100) - ringStroke / 2;
-    const circleTextBox = Math.max(1, Math.SQRT2 * ringInnerRadius);
-    activeMinuteBoxWidth = activeProgressStyle === "circle"
-      ? circleTextBox
-      : activeCardSize - 2 * progressInset;
-    activeMinuteBoxHeight = activeProgressStyle === "circle"
-      ? circleTextBox
-      : activeCardSize - (2 * progressInset) - progressHeight;
-    shell.style.setProperty("--pf-card-size", `${activeCardSize}px`);
-    shell.style.setProperty("--pf-card-radius", `${cardRadius}px`);
-    shell.style.setProperty("--pf-progress-inset", `${progressInset}px`);
-    shell.style.setProperty("--pf-progress-height", `${progressHeight}px`);
-    shell.style.setProperty("--pf-line-gap", `${lineGap}px`);
-    shell.style.setProperty("--pf-line-box-height", `${activeMinuteBoxHeight}px`);
-    shell.style.setProperty("--pf-ring-stroke", `${ringStroke}px`);
-    shell.style.setProperty("--pf-circle-text-box", `${circleTextBox}px`);
-    applyMinuteTypography(displayedMinutes);
-    $("#pf-card-size-value").textContent = `${Math.round(activeCardSize)} px`;
-  }
-
-  function applyMinuteTypography(minutes) {
-    const digits = String(Math.max(0, Math.round(Number(minutes) || 0))).length;
-    const circleStyle = activeProgressStyle === "circle";
-    const sizeRatio = circleStyle
-      ? (digits >= 3 ? 0.32 : CIRCLE_REFERENCE_FONT_SIZE / CIRCLE_REFERENCE_CARD_SIZE)
-      : (digits >= 3 ? 0.43 : LINE_REFERENCE_FONT_SIZE / LINE_REFERENCE_CARD_SIZE);
-    const spacingRatio = circleStyle
-      ? (digits >= 3 ? -0.019 : digits === 1 ? -0.015 : -0.026)
-      : -0.035;
-    const scaleX = 1;
-    const shell = $(".pf-shell");
-    shell.style.setProperty("--pf-minute-size", `${activeCardSize * sizeRatio}px`);
-    shell.style.setProperty("--pf-minute-spacing", `${activeCardSize * spacingRatio}px`);
-    shell.style.setProperty("--pf-minute-scale-x", String(scaleX));
-    fitMinuteText(activeCardSize * sizeRatio, scaleX);
-  }
-
-  function fitMinuteText(nominalSize, scaleX) {
-    const minute = $("#pf-minute");
-    if (!minute) return;
-    minute.style.fontSize = `${nominalSize}px`;
-    minute.style.transform = `translate(-50%, -50%) scaleX(${scaleX})`;
-    const bounds = minute.getBoundingClientRect();
-    const fit = Math.min(
-      1,
-      Math.max(1, activeMinuteBoxWidth - 2) / Math.max(1, bounds.width),
-      Math.max(1, activeMinuteBoxHeight - 2) / Math.max(1, bounds.height)
-    );
-    minute.style.fontSize = `${nominalSize * fit}px`;
-  }
-
   function accentColor(data) {
     if (data.state !== "running") return "var(--pf-inactive)";
     return data.phase === "focus" ? "var(--pf-focus)" : "var(--pf-break)";
@@ -689,22 +537,18 @@
     $("#pf-history-note").textContent = `Today: ${today.completed} completed · ${today.answers} cards reviewed`;
   }
 
-  function renderReviewTimer(data) {
+  function renderReviewBar(data) {
+    const height = Math.max(36, Math.min(64, Number(data.config.answer_button_height) || 44));
+    $(".pf-shell").style.setProperty("--pf-review-height", `${height}px`);
     const timer = $("#pf-review-timer");
     const duration = Math.max(1, Number(data.duration_seconds) || 1);
     const remaining = Math.max(0, Number(data.remaining_seconds) || 0);
     const remainingProgress = Math.max(0, Math.min(1, remaining / duration));
     const visualProgress = data.phase === "focus" ? 1 - remainingProgress : remainingProgress;
-    const indicator = data.config.answer_timer_style === "circle" ? "circle" : "line";
-    const height = Math.max(36, Math.min(64, Number(data.config.answer_button_height) || 44));
-    $(".pf-shell").style.setProperty("--pf-review-height", `${height}px`);
-    timer.dataset.indicator = indicator;
     timer.dataset.state = data.state === "running" ? "running" : "inactive";
     timer.dataset.phase = data.phase;
     timer.title = `${phaseLabel(data.phase)} · ${mmss(remaining)}`;
-    timer.querySelector(".pf-review-time").textContent = indicator === "circle"
-      ? String(Math.ceil(remaining / 60))
-      : mmss(remaining);
+    timer.querySelector(".pf-review-time").textContent = String(Math.ceil(remaining / 60));
     timer.querySelector(".pf-review-ring-fill").style.strokeDasharray = `${visualProgress * 87.5} 100`;
     scheduleReviewActionsPosition();
     scheduleLiquidGlass();
@@ -759,8 +603,6 @@
     actions.replaceChildren();
     const counts = $("#pf-review-counts");
     const values = layout.counts || priorCounts || {};
-    const hasCounts = Boolean(values.new || values.learn || values.review);
-    counts.hidden = !hasCounts;
     $("#pf-review-new").textContent = values.new || "0";
     $("#pf-review-learn").textContent = values.learn || "0";
     $("#pf-review-due").textContent = values.review || "0";
@@ -795,36 +637,14 @@
   }
 
   function render(data) {
-    const priorHideKey = lastHideKey;
     snapshot = data;
     const shell = $(".pf-shell");
     shell.style.setProperty("--pf-ring", accentColor(data));
     shell.classList.toggle("pf-custom-preset", data.config.preset === "custom");
-    activeProgressStyle = data.config.progress_style === "circle" ? "circle" : "line";
-    card.classList.toggle("pf-progress-circle", activeProgressStyle === "circle");
-    const sizeControl = $("#pf-card-size");
-    applyCardSize(document.activeElement === sizeControl ? sizeControl.value : data.config.card_size);
-
-    displayedMinutes = data.state === "completed" ? 0 : Math.ceil(Math.max(0, data.remaining_seconds) / 60);
-    $("#pf-minute").textContent = String(displayedMinutes);
-    applyMinuteTypography(displayedMinutes);
     $("#pf-exact-time").textContent = mmss(data.remaining_seconds);
     $("#pf-phase-name").textContent = phaseLabel(data.phase);
     const cardCount = data.phase === "focus" && data.answer_count > 0 ? ` · ${data.answer_count} cards` : "";
     $("#pf-round-label").textContent = `Round ${data.round_index}${cardCount}`;
-    const duration = Math.max(1, Number(data.duration_seconds) || 1);
-    const remainingProgress = Math.max(0, Math.min(1, Number(data.remaining_seconds) / duration));
-    const elapsedProgress = 1 - remainingProgress;
-    const visualProgress = data.phase === "focus" ? elapsedProgress : remainingProgress;
-    $("#pf-card-progress").style.width = `${visualProgress * 100}%`;
-    const ring = $("#pf-card-ring-progress");
-    ring.setAttribute("d", ringArcPath(visualProgress));
-    ring.style.opacity = visualProgress > 0 ? "1" : "0";
-
-    card.classList.toggle("pf-completed", data.state === "completed");
-    card.classList.toggle("pf-completed-focus", data.state === "completed" && data.completion?.kind === "focus");
-    card.classList.toggle("pf-completed-break", data.state === "completed" && data.completion?.kind === "break");
-
     const primary = primaryState(data);
     const primaryButton = $("#pf-primary");
     primaryButton.dataset.action = primary.action;
@@ -850,73 +670,37 @@
     setControlValue($("#pf-long-after"), data.config.long_break_after);
     setControlValue($("#pf-idle-minutes"), data.config.idle_autopause_enabled ? data.config.idle_minutes : 0);
     setControlValue($("#pf-daily-goal"), data.config.daily_goal);
-    setControlValue($("#pf-card-size"), data.config.card_size);
-    setControlValue($("#pf-progress-style"), activeProgressStyle);
-    setControlValue(
-      $("#pf-answer-timer-style"),
-      data.config.answer_timer_style === "circle" ? "circle" : "line"
-    );
     setControlValue($("#pf-answer-button-height"), data.config.answer_button_height);
     $("#pf-answer-button-height-value").textContent = `${data.config.answer_button_height} px`;
     $("#pf-focus-hide").setAttribute("aria-checked", String(Boolean(data.config.focus_hide)));
     $("#pf-sound").setAttribute("aria-checked", String(Boolean(data.config.completion_sound)));
 
-    renderReviewTimer(data);
+    renderReviewBar(data);
 
     renderHistory(data);
-    applyPosition(data.position);
     positionPanel();
-
-    lastHideKey = `${data.state}:${data.config.focus_hide}`;
-    if (lastHideKey !== priorHideKey || data.state === "completed" || data.state === "paused") {
-      scheduleFocusHide();
-    }
-  }
-
-  function applyPosition(position) {
-    if (!position || dragging) return;
-    const availableX = Math.max(0, window.innerWidth - activeCardSize - VIEW_MARGIN * 2);
-    const availableY = Math.max(0, window.innerHeight - activeCardSize - VIEW_MARGIN * 2);
-    card.style.left = `${VIEW_MARGIN + availableX * Math.max(0, Math.min(1, position.x))}px`;
-    card.style.top = `${VIEW_MARGIN + availableY * Math.max(0, Math.min(1, position.y))}px`;
   }
 
   function positionPanel() {
     if (!panelOpen) return;
-    if (answerBarMode) {
-      const anchor = $("#pf-review-timer");
-      const anchorRect = anchor.getBoundingClientRect();
-      const availableHeight = anchorRect.top - VIEW_MARGIN - 12;
-      panel.style.maxHeight = `${Math.max(160, Math.min(720, availableHeight))}px`;
-      const width = panel.offsetWidth || 380;
-      const height = panel.offsetHeight || Math.min(720, availableHeight);
-      const left = Math.max(
-        VIEW_MARGIN,
-        Math.min(window.innerWidth - width - VIEW_MARGIN, anchorRect.left)
-      );
-      const top = Math.max(VIEW_MARGIN, anchorRect.top - height - 12);
-      panel.style.left = `${left}px`;
-      panel.style.top = `${top}px`;
-      return;
-    }
-    panel.style.maxHeight = "";
+    const anchor = $("#pf-review-timer");
+    const anchorRect = anchor.getBoundingClientRect();
+    const availableHeight = anchorRect.top - VIEW_MARGIN - 12;
+    panel.style.maxHeight = `${Math.max(160, Math.min(720, availableHeight))}px`;
     const width = panel.offsetWidth || 380;
-    const height = panel.offsetHeight || Math.min(720, window.innerHeight - 24);
-    const cardRect = card.getBoundingClientRect();
-    let left = cardRect.left - width - 12;
-    if (left < VIEW_MARGIN) left = cardRect.right + 12;
-    left = Math.max(VIEW_MARGIN, Math.min(window.innerWidth - width - VIEW_MARGIN, left));
-    let top = Math.max(VIEW_MARGIN, Math.min(window.innerHeight - height - VIEW_MARGIN, cardRect.top));
+    const height = panel.offsetHeight || Math.min(720, availableHeight);
+    const left = Math.max(
+      VIEW_MARGIN,
+      Math.min(window.innerWidth - width - VIEW_MARGIN, anchorRect.left)
+    );
+    const top = Math.max(VIEW_MARGIN, anchorRect.top - height - 12);
     panel.style.left = `${left}px`;
     panel.style.top = `${top}px`;
   }
 
   function openPanel() {
     panelOpen = true;
-    clearTimeout(hideTimer);
     panel.scrollTop = 0;
-    card.classList.remove("pf-focus-hidden");
-    card.classList.add("pf-panel-open");
     panel.classList.add("pf-open");
     panel.setAttribute("aria-hidden", "false");
     requestAnimationFrame(positionPanel);
@@ -926,40 +710,26 @@
     panelOpen = false;
     closeCustomSelects();
     hideConfirm();
-    card.classList.remove("pf-panel-open");
     panel.classList.remove("pf-open");
     panel.setAttribute("aria-hidden", "true");
-    scheduleFocusHide();
-  }
-
-  function scheduleFocusHide() {
-    clearTimeout(hideTimer);
-    card.classList.remove("pf-focus-hidden");
-    if (!snapshot || panelOpen || snapshot.state !== "running" || snapshot.phase !== "focus" || !snapshot.config.focus_hide) return;
-    hideTimer = setTimeout(() => card.classList.add("pf-focus-hidden"), HIDE_DELAY);
   }
 
   function signalFocusComplete() {
     clearTimeout(completionSignalTimer);
-    card.classList.remove("pf-focus-hidden", "pf-focus-complete-signal");
-    void card.offsetWidth;
-    card.classList.add("pf-focus-complete-signal");
-    const reviewTimer = $("#pf-review-timer");
-    reviewTimer.classList.remove("pf-review-complete");
-    void reviewTimer.offsetWidth;
-    reviewTimer.classList.add("pf-review-complete");
+    const reviewLauncher = $("#pf-review-timer");
+    reviewLauncher.classList.remove("pf-review-complete");
+    void reviewLauncher.offsetWidth;
+    reviewLauncher.classList.add("pf-review-complete");
     completionSignalTimer = setTimeout(
       () => {
-        card.classList.remove("pf-focus-complete-signal");
-        reviewTimer.classList.remove("pf-review-complete");
+        reviewLauncher.classList.remove("pf-review-complete");
       },
       1200
     );
   }
 
   function setAnswerBarMode(enabled) {
-    answerBarMode = Boolean(enabled);
-    $(".pf-shell").classList.toggle("pf-answer-bar-mode", answerBarMode);
+    $(".pf-shell").classList.add("pf-answer-bar-mode");
     scheduleReviewActionsPosition();
     scheduleLiquidGlass();
     if (panelOpen) requestAnimationFrame(positionPanel);
@@ -996,63 +766,6 @@
   }
 
   root.querySelectorAll(".pf-select").forEach(initializeCustomSelect);
-
-  card.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0) return;
-    reportActivity(true);
-    const rect = card.getBoundingClientRect();
-    dragging = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      left: rect.left,
-      top: rect.top,
-      moved: false,
-    };
-    card.setPointerCapture(event.pointerId);
-    card.classList.add("pf-dragging");
-    event.preventDefault();
-  });
-
-  card.addEventListener("pointermove", (event) => {
-    if (!dragging || dragging.pointerId !== event.pointerId) return;
-    const dx = event.clientX - dragging.startX;
-    const dy = event.clientY - dragging.startY;
-    if (Math.hypot(dx, dy) > 4) dragging.moved = true;
-    if (!dragging.moved) return;
-    const maxLeft = window.innerWidth - activeCardSize - VIEW_MARGIN;
-    const maxTop = window.innerHeight - activeCardSize - VIEW_MARGIN;
-    card.style.left = `${Math.max(VIEW_MARGIN, Math.min(maxLeft, dragging.left + dx))}px`;
-    card.style.top = `${Math.max(VIEW_MARGIN, Math.min(maxTop, dragging.top + dy))}px`;
-    positionPanel();
-  });
-
-  card.addEventListener("pointerup", (event) => {
-    if (!dragging || dragging.pointerId !== event.pointerId) return;
-    const wasMoved = dragging.moved;
-    dragging = null;
-    card.classList.remove("pf-dragging");
-    if (wasMoved) {
-      const rect = card.getBoundingClientRect();
-      const availableX = Math.max(1, window.innerWidth - activeCardSize - VIEW_MARGIN * 2);
-      const availableY = Math.max(1, window.innerHeight - activeCardSize - VIEW_MARGIN * 2);
-      send("move", {
-        x: (rect.left - VIEW_MARGIN) / availableX,
-        y: (rect.top - VIEW_MARGIN) / availableY,
-      });
-    } else if (panelOpen) {
-      closePanel();
-    } else {
-      openPanel();
-    }
-  });
-
-  card.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      panelOpen ? closePanel() : openPanel();
-    }
-  });
 
   $("#pf-primary").addEventListener("click", () => {
     if (!snapshot) return;
@@ -1093,18 +806,6 @@
   $("#pf-long-minutes").addEventListener("change", (event) => sendSettings({ long_break_minutes: Number(event.target.value) }));
   $("#pf-long-after").addEventListener("change", (event) => sendSettings({ long_break_after: Number(event.target.value) }));
   $("#pf-daily-goal").addEventListener("change", (event) => sendSettings({ daily_goal: Number(event.target.value) }));
-  $("#pf-progress-style").addEventListener("pf-change", (event) => sendSettings({ progress_style: event.detail.value }));
-  $("#pf-card-size").addEventListener("input", (event) => {
-    applyCardSize(event.target.value);
-    if (snapshot) applyPosition(snapshot.position);
-    positionPanel();
-  });
-  $("#pf-card-size").addEventListener("change", (event) => {
-    sendSettings({ card_size: Number(event.target.value) });
-  });
-  $("#pf-answer-timer-style").addEventListener("pf-change", (event) => {
-    sendSettings({ answer_timer_style: event.detail.value });
-  });
   $("#pf-answer-button-height").addEventListener("input", (event) => {
     const height = Number(event.target.value);
     $("#pf-answer-button-height-value").textContent = `${height} px`;
@@ -1134,7 +835,6 @@
     requestAnimationFrame(positionPanel);
   });
 
-  $("#pf-reset-position").addEventListener("click", () => send("reset_position"));
   $("#pf-clear-history").addEventListener("click", () => {
     showConfirm(
       "Clear all history?",
@@ -1155,7 +855,7 @@
     reportActivity();
     const activeSelect = event.target.closest?.(".pf-select") || null;
     closeCustomSelects(activeSelect);
-    if (panelOpen && !panel.contains(event.target) && !card.contains(event.target)) closePanel();
+    if (panelOpen && !panel.contains(event.target) && !$("#pf-review-timer").contains(event.target)) closePanel();
   }, { passive: true });
   document.addEventListener("pointermove", () => reportActivity(), { passive: true });
   document.addEventListener("keydown", (event) => {
@@ -1168,7 +868,6 @@
     }
   });
   window.addEventListener("resize", () => {
-    if (snapshot) applyPosition(snapshot.position);
     scheduleReviewActionsPosition();
     scheduleLiquidGlass();
     positionPanel();

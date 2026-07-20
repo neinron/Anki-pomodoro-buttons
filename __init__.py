@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import time
@@ -19,6 +20,19 @@ from .engine import TimerEngine, normalize_config
 ADDON_DIR = Path(__file__).resolve().parent
 SOUND_PATH = ADDON_DIR / "assets" / "completion.wav"
 MESSAGE_PREFIX = "pomodoro_focus:"
+
+
+def _asset_version() -> str:
+    digest = hashlib.sha256()
+    for name in ("pomodoro.css", "pomodoro.js", "pomodoro_bottom.js"):
+        try:
+            digest.update((ADDON_DIR / "web" / name).read_bytes())
+        except OSError:
+            digest.update(name.encode("utf-8"))
+    return digest.hexdigest()[:12]
+
+
+ASSET_VERSION = _asset_version()
 
 
 def _read_json(path: Path, fallback: Any) -> Any:
@@ -312,12 +326,6 @@ class PomodoroController:
             event = self.engine.reset()
         elif action == "skip":
             event = self.engine.skip(now_mono, now_wall)
-        elif action == "move":
-            self.engine.set_position(payload.get("x"), payload.get("y"))
-            event = "moved"
-        elif action == "reset_position":
-            self.engine.reset_position()
-            event = "moved"
         elif action == "clear_history":
             self.engine.clear_history()
             event = "history_cleared"
@@ -335,10 +343,7 @@ class PomodoroController:
                     "focus_hide",
                     "completion_sound",
                     "daily_goal",
-                    "card_size",
-                    "progress_style",
                     "answer_button_height",
-                    "answer_timer_style",
                 }
                 clean_patch = {key: value for key, value in patch.items() if key in allowed}
                 event = self.engine.apply_settings(
@@ -393,17 +398,18 @@ controller = PomodoroController()
 def inject_web_assets(web_content: Any, context: Any) -> None:
     package = mw.addonManager.addonFromModule(__name__)
     if isinstance(context, Reviewer):
-        web_content.css.append(f"/_addons/{package}/web/pomodoro.css")
+        web_content.css.append(
+            f"/_addons/{package}/web/pomodoro.css?v={ASSET_VERSION}"
+        )
         # Anki emits entries from ``web_content.js`` before ``web_content.body``.
         # Keep the root before the script so the UI can initialise synchronously.
         web_content.body += (
             '<div id="pomodoro-focus-root"></div>'
-            f'<script src="/_addons/{package}/web/pomodoro.js"></script>'
+            f'<script src="/_addons/{package}/web/pomodoro.js?v={ASSET_VERSION}"></script>'
         )
     elif isinstance(context, ReviewerBottomBar):
-        web_content.css.append(f"/_addons/{package}/web/pomodoro_bottom.css")
         web_content.body += (
-            f'<script src="/_addons/{package}/web/pomodoro_bottom.js"></script>'
+            f'<script src="/_addons/{package}/web/pomodoro_bottom.js?v={ASSET_VERSION}"></script>'
         )
 
 

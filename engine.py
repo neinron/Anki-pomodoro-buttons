@@ -34,13 +34,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "focus_hide": True,
     "completion_sound": True,
     "daily_goal": 4,
-    "card_size": 96,
-    "progress_style": "line",
     "answer_button_height": 44,
-    "answer_timer_style": "line",
 }
-
-DEFAULT_POSITION = {"x": 0.94, "y": 0.06}
 
 PHASE_DURATION_KEY = {
     "focus": "focus_minutes",
@@ -62,12 +57,6 @@ def normalize_config(raw: dict[str, Any] | None) -> dict[str, Any]:
     preset = str(source.get("preset", "classic"))
     if preset not in {*PRESETS, "custom"}:
         preset = "custom"
-    progress_style = str(source.get("progress_style", "line"))
-    if progress_style not in {"line", "circle"}:
-        progress_style = "line"
-    answer_timer_style = str(source.get("answer_timer_style", "line"))
-    if answer_timer_style not in {"line", "circle", "hidden"}:
-        answer_timer_style = "line"
     return {
         "preset": preset,
         "focus_minutes": _clamp(source.get("focus_minutes"), 1, 120, 25),
@@ -85,12 +74,9 @@ def normalize_config(raw: dict[str, Any] | None) -> dict[str, Any]:
         "focus_hide": bool(source.get("focus_hide", True)),
         "completion_sound": bool(source.get("completion_sound", True)),
         "daily_goal": _clamp(source.get("daily_goal"), 1, 12, 4),
-        "card_size": _clamp(source.get("card_size"), 50, 144, 96),
-        "progress_style": progress_style,
         "answer_button_height": _clamp(
             source.get("answer_button_height"), 36, 64, 44
         ),
-        "answer_timer_style": answer_timer_style,
     }
 
 
@@ -124,7 +110,6 @@ class TimerEngine:
         self.completion: dict[str, Any] | None = None
         self.next_phase: str | None = None
         self.next_round_index: int | None = None
-        self.position = dict(DEFAULT_POSITION)
         if persisted:
             self._restore(persisted)
         self.prune_history((now_wall or _wall_now()).date())
@@ -302,20 +287,6 @@ class TimerEngine:
                 self.deadline_mono = now_mono + self.remaining_seconds
         return "settings_updated"
 
-    def set_position(self, x: Any, y: Any) -> None:
-        try:
-            parsed_x = float(x)
-            parsed_y = float(y)
-        except (TypeError, ValueError):
-            return
-        self.position = {
-            "x": max(0.0, min(1.0, parsed_x)),
-            "y": max(0.0, min(1.0, parsed_y)),
-        }
-
-    def reset_position(self) -> None:
-        self.position = dict(DEFAULT_POSITION)
-
     def clear_history(self) -> None:
         self.history = []
 
@@ -403,7 +374,6 @@ class TimerEngine:
             "answer_count": self.session_answer_count,
             "completion": deepcopy(self.completion),
             "config": deepcopy(self.config),
-            "position": dict(self.position),
             "daily": self.daily_summary(today),
         }
 
@@ -425,7 +395,6 @@ class TimerEngine:
             "completion": deepcopy(self.completion),
             "next_phase": self.next_phase,
             "next_round_index": self.next_round_index,
-            "position": dict(self.position),
         }
 
     def _restore(self, data: dict[str, Any]) -> None:
@@ -462,9 +431,6 @@ class TimerEngine:
             if next_round is not None
             else None
         )
-        position = data.get("position")
-        if isinstance(position, dict):
-            self.set_position(position.get("x"), position.get("y"))
         if self.state == "paused" and not self.pause_reason:
             self.pause_reason = "app_inactive"
 
