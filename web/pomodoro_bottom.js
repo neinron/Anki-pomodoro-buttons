@@ -199,6 +199,22 @@
           .forEach((node) => node.remove());
         if (labelText) label.textContent = labelText;
         intervalLabel.textContent = interval ? interval.textContent.trim() : "";
+        if (interval) interval.style.setProperty("display", "none", "important");
+        button.style.setProperty("display", "inline-flex", "important");
+        button.style.setProperty("flex-direction", "column", "important");
+        button.style.setProperty("align-items", "center", "important");
+        button.style.setProperty("justify-content", "center", "important");
+        button.style.setProperty("gap", "3px", "important");
+        label.style.setProperty("order", "2", "important");
+        label.style.setProperty("display", "block", "important");
+        label.style.setProperty("line-height", "1", "important");
+        intervalLabel.style.setProperty("order", "1", "important");
+        intervalLabel.style.setProperty("display", "block", "important");
+        intervalLabel.style.setProperty("color", "var(--pf-native-secondary)", "important");
+        intervalLabel.style.setProperty("font-size", "12px", "important");
+        intervalLabel.style.setProperty("font-weight", "400", "important");
+        intervalLabel.style.setProperty("line-height", "1", "important");
+        intervalLabel.style.setProperty("font-variant-numeric", "tabular-nums", "important");
         button.dataset.ease = String(ease);
         button.classList.add(
           "pf-native-control",
