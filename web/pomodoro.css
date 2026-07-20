@@ -256,6 +256,7 @@ html.nightMode .pf-shell,
   font-weight: 600;
   line-height: 1;
   letter-spacing: -.01em;
+  corner-shape: round;
   transition:
     transform 260ms cubic-bezier(.34, 1.56, .64, 1),
     background-color 140ms ease,
@@ -276,6 +277,8 @@ html.nightMode .pf-shell,
   width: var(--pf-review-height);
   min-width: var(--pf-review-height);
   padding: 0;
+  border-radius: 50%;
+  corner-shape: round;
 }
 
 .pf-sf-symbol {
@@ -501,6 +504,8 @@ html.nightMode .pf-shell,
   width: var(--pf-review-height);
   min-width: var(--pf-review-height);
   padding: 0;
+  border-radius: var(--pf-review-square-radius);
+  corner-shape: squircle;
 }
 
 .pf-review-timer[data-indicator="circle"] .pf-review-time {
