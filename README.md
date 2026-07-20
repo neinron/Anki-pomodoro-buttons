@@ -1,6 +1,6 @@
 # Pomodoro Focus
 
-Personal Pomodoro add-on for Anki on macOS, tested primarily with Anki 25.09.4.
+Personal Pomodoro add-on for Anki on macOS, tested primarily with Anki 25.07.5.
 
 ## Development install
 
@@ -8,11 +8,11 @@ Copy this directory to:
 
 `~/Library/Application Support/Anki2/addons21/pomodoro_focus/`
 
-Then restart Anki. The timer card appears in the reviewer. Click the card to
-open controls and settings. The Tools menu entry can also reveal the panel.
-The card size can be adjusted live from 50 to 144 px at the bottom of the settings.
-The progress display can be switched between a horizontal line and a clockwise
-315-degree ring with its opening centered at the bottom.
+Then restart Anki. Pomodoro Focus augments Anki's native reviewer bottom bar;
+Anki's own question and answer buttons remain responsible for reviewing cards.
+The left timer opens the controls and settings, which are also available from
+the Tools menu. The timer can be switched between an `MM:SS` pill and a
+315-degree ring, and the native review-button height can be adjusted live.
 Only grading a card starts or resumes a focus session; showing the answer does
 not. The triggering rating is counted exactly once. This also resumes focus
 after a manual, away, reviewer, or idle pause.

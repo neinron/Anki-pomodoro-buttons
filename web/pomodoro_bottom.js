@@ -4,11 +4,10 @@
   if (window.PomodoroFocusBottom) return;
 
   const PREFIX = "pomodoro_focus:";
-  let lastStudyActions = "";
-  let lastCardCounts = { new: "", learn: "", review: "", active: "" };
+  let snapshot = null;
+  let lastCounts = { new: "0", learn: "0", review: "0", active: "" };
   let scheduled = false;
-  let forcePending = false;
-  let requestContext = null;
+  let completionSignalTimer = null;
 
   function send(action, data = {}) {
     if (typeof pycmd === "function") {
@@ -16,11 +15,110 @@
     }
   }
 
-  function buttonLabel(button) {
-    if (!button) return "";
-    const copy = button.cloneNode(true);
-    copy.querySelectorAll(".nobold, .stattxt, #time, svg").forEach((node) => node.remove());
-    return copy.textContent.replace(/\s+/g, " ").trim();
+  function mmss(value) {
+    const seconds = Math.max(0, Math.ceil(Number(value) || 0));
+    const minutes = Math.floor(seconds / 60);
+    return `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+  }
+
+  function phaseLabel(phase) {
+    if (phase === "short_break") return "Short Break";
+    if (phase === "long_break") return "Long Break";
+    return "Focus";
+  }
+
+  function symbol(className) {
+    const element = document.createElement("span");
+    element.className = `pf-native-symbol ${className}`;
+    element.setAttribute("aria-hidden", "true");
+    return element;
+  }
+
+  function createTimer() {
+    const button = document.createElement("button");
+    button.id = "pf-native-timer";
+    button.className = "pf-native-control pf-native-timer";
+    button.type = "button";
+    button.setAttribute("aria-label", "Open Pomodoro Focus");
+    button.innerHTML = `
+      <span class="pf-native-time">25:00</span>
+      <svg class="pf-native-ring" viewBox="0 0 40 40" aria-hidden="true">
+        <circle class="pf-native-ring-track" pathLength="100" cx="20" cy="20" r="16"></circle>
+        <circle class="pf-native-ring-fill" pathLength="100" cx="20" cy="20" r="16"></circle>
+      </svg>`;
+    button.addEventListener("click", () => send("open_panel"));
+    return button;
+  }
+
+  function createCounts() {
+    const counts = document.createElement("div");
+    counts.id = "pf-native-counts";
+    counts.className = "pf-native-counts";
+    counts.setAttribute("aria-label", "New, learning, and review card counts");
+    counts.innerHTML = `
+      <span class="pf-native-count pf-native-new" title="New cards">0</span>
+      <span class="pf-native-count pf-native-learn" title="Learning cards">0</span>
+      <span class="pf-native-count pf-native-review" title="Review cards">0</span>`;
+    return counts;
+  }
+
+  function decorateUtility(button, kind) {
+    if (!button) return;
+    const label = button.textContent.replace(/\s+/g, " ").trim() || kind;
+    button.id = `pf-native-${kind}`;
+    button.classList.add("pf-native-control", "pf-native-utility", `pf-native-${kind}`);
+    button.setAttribute("aria-label", label);
+    button.title = button.title || label;
+    button.replaceChildren(symbol(`pf-native-symbol-${kind}`));
+  }
+
+  function mountStaticControls() {
+    const row = document.querySelector("#innertable > tbody > tr")
+      || document.querySelector("#innertable > tr");
+    const middle = document.getElementById("middle");
+    if (!row || !middle) return false;
+
+    document.documentElement.classList.add("pf-native-review-root");
+    document.body.classList.add("pf-native-review-body");
+    row.classList.add("pf-native-row");
+    middle.classList.add("pf-native-middle");
+
+    const cells = [...row.children].filter((element) => element.tagName === "TD");
+    const left = cells[0];
+    const right = cells[cells.length - 1];
+    if (!left || !right) return false;
+    left.classList.add("pf-native-left");
+    right.classList.add("pf-native-right");
+
+    const edit = document.getElementById("pf-native-edit")
+      || left.querySelector("button:not(#pf-native-timer)");
+    const more = document.getElementById("pf-native-more")
+      || right.querySelector("button:not(#pf-native-info):not(#pf-native-edit)");
+
+    if (!document.getElementById("pf-native-timer")) left.prepend(createTimer());
+    if (!document.getElementById("pf-native-counts")) left.append(createCounts());
+
+    if (edit && !edit.classList.contains("pf-native-edit")) {
+      decorateUtility(edit, "edit");
+      right.prepend(edit);
+    }
+
+    if (!document.getElementById("pf-native-info")) {
+      const info = document.createElement("button");
+      info.id = "pf-native-info";
+      info.className = "pf-native-control pf-native-utility pf-native-info";
+      info.type = "button";
+      info.title = "Info";
+      info.setAttribute("aria-label", "Info");
+      info.append(symbol("pf-native-symbol-info"));
+      info.addEventListener("click", () => send("card_info"));
+      right.insertBefore(info, more || null);
+    }
+
+    if (more && !more.classList.contains("pf-native-more")) {
+      decorateUtility(more, "more");
+    }
+    return true;
   }
 
   function answerEase(button) {
@@ -31,77 +129,116 @@
     return match ? Number(match[1]) : 0;
   }
 
-  function readStudyActions(force = false) {
-    const middle = document.getElementById("middle");
-    if (!middle || !requestContext) return;
-
-    const outerButtons = [...document.querySelectorAll("#innertable > tbody > tr > td.stat > button")];
-    const base = {
-      edit_label: buttonLabel(outerButtons[0]) || "Edit",
-      more_label: buttonLabel(outerButtons[outerButtons.length - 1]) || "More",
-    };
+  function readCounts(middle) {
     const showAnswer = middle.querySelector("#ansbut");
-    let layout;
+    if (!showAnswer) return;
+    lastCounts = {
+      new: showAnswer.querySelector(".new-count")?.textContent.trim() || "0",
+      learn: showAnswer.querySelector(".learn-count")?.textContent.trim() || "0",
+      review: showAnswer.querySelector(".review-count")?.textContent.trim() || "0",
+      active: showAnswer.querySelector(".new-count u") ? "new"
+        : showAnswer.querySelector(".learn-count u") ? "learn"
+          : showAnswer.querySelector(".review-count u") ? "review"
+            : "",
+    };
+  }
 
+  function renderCounts() {
+    const counts = document.getElementById("pf-native-counts");
+    if (!counts) return;
+    counts.querySelector(".pf-native-new").textContent = lastCounts.new;
+    counts.querySelector(".pf-native-learn").textContent = lastCounts.learn;
+    counts.querySelector(".pf-native-review").textContent = lastCounts.review;
+    if (lastCounts.active) counts.dataset.active = lastCounts.active;
+    else delete counts.dataset.active;
+  }
+
+  function decorateMiddle() {
+    const middle = document.getElementById("middle");
+    if (!middle) return;
+    const showAnswer = middle.querySelector("#ansbut");
     if (showAnswer) {
-      lastCardCounts = {
-        new: middle.querySelector(".new-count")?.textContent.trim() || "",
-        learn: middle.querySelector(".learn-count")?.textContent.trim() || "",
-        review: middle.querySelector(".review-count")?.textContent.trim() || "",
-        active: middle.querySelector(".new-count u") ? "new"
-          : middle.querySelector(".learn-count u") ? "learn"
-            : middle.querySelector(".review-count u") ? "review"
-              : "",
-      };
-      layout = {
-        ...base,
-        side: "question",
-        show_label: buttonLabel(showAnswer) || "Show Answer",
-        counts: lastCardCounts,
-      };
+      delete middle.dataset.answerCount;
+      readCounts(middle);
+      showAnswer.classList.add("pf-native-control", "pf-native-show");
+      if (!middle.querySelector("#pf-native-skip")) {
+        const skip = document.createElement("button");
+        skip.id = "pf-native-skip";
+        skip.className = "pf-native-control pf-native-skip";
+        skip.type = "button";
+        skip.textContent = "Skip";
+        skip.addEventListener("click", () => send("skip_card"));
+        middle.prepend(skip);
+      }
     } else {
       const answerButtons = [...middle.querySelectorAll("button")]
         .filter((button) => answerEase(button));
-      if (!answerButtons.length) return;
-      layout = {
-        ...base,
-        side: "answer",
-        counts: lastCardCounts,
-        buttons: answerButtons.map((button) => ({
-          ease: answerEase(button),
-          label: buttonLabel(button),
-          due: button.querySelector(".nobold")?.textContent.trim() || "",
-        })),
-      };
+      middle.dataset.answerCount = String(answerButtons.length);
+      answerButtons.forEach((button) => {
+        const ease = answerEase(button);
+        button.dataset.ease = String(ease);
+        button.classList.add(
+          "pf-native-control",
+          "pf-native-answer",
+          `pf-native-ease-${ease}`,
+        );
+      });
     }
-
-    layout.request = { ...requestContext };
-
-    const serialized = JSON.stringify(layout);
-    if (!force && serialized === lastStudyActions) return;
-    lastStudyActions = serialized;
-    send("study_actions", { layout });
+    renderCounts();
   }
 
-  function scheduleRead(force = false) {
-    forcePending = forcePending || force;
+  function refreshNativeBar() {
+    scheduled = false;
+    if (!mountStaticControls()) return;
+    decorateMiddle();
+    if (snapshot) render(snapshot);
+  }
+
+  function scheduleRefresh() {
     if (scheduled) return;
     scheduled = true;
-    requestAnimationFrame(() => {
-      const shouldForce = forcePending;
-      forcePending = false;
-      scheduled = false;
-      readStudyActions(shouldForce);
-    });
+    requestAnimationFrame(refreshNativeBar);
+  }
+
+  function render(data) {
+    snapshot = data;
+    const timer = document.getElementById("pf-native-timer");
+    if (!timer) return;
+    const height = Math.max(36, Math.min(64, Number(data.config.answer_button_height) || 44));
+    document.documentElement.style.setProperty("--pf-native-height", `${height}px`);
+    const indicator = data.config.answer_timer_style === "circle" ? "circle" : "time";
+    const duration = Math.max(1, Number(data.duration_seconds) || 1);
+    const remaining = Math.max(0, Number(data.remaining_seconds) || 0);
+    const remainingProgress = Math.max(0, Math.min(1, remaining / duration));
+    const visualProgress = data.phase === "focus" ? 1 - remainingProgress : remainingProgress;
+    timer.dataset.indicator = indicator;
+    timer.dataset.state = data.state === "running" ? "running" : "inactive";
+    timer.dataset.phase = data.phase;
+    timer.title = `${phaseLabel(data.phase)} · ${mmss(remaining)}`;
+    timer.querySelector(".pf-native-time").textContent = indicator === "circle"
+      ? String(Math.ceil(remaining / 60))
+      : mmss(remaining);
+    timer.querySelector(".pf-native-ring-fill").style.strokeDasharray = `${visualProgress * 87.5} 100`;
+  }
+
+  function signalFocusComplete() {
+    const timer = document.getElementById("pf-native-timer");
+    if (!timer) return;
+    clearTimeout(completionSignalTimer);
+    timer.classList.remove("pf-native-complete");
+    void timer.offsetWidth;
+    timer.classList.add("pf-native-complete");
+    completionSignalTimer = setTimeout(() => timer.classList.remove("pf-native-complete"), 1200);
   }
 
   function start() {
     const middle = document.getElementById("middle");
-    if (!middle) {
+    if (!middle || !mountStaticControls()) {
       requestAnimationFrame(start);
       return;
     }
-    new MutationObserver(scheduleRead).observe(document.documentElement, {
+    decorateMiddle();
+    new MutationObserver(scheduleRefresh).observe(middle, {
       childList: true,
       subtree: true,
       characterData: true,
@@ -110,12 +247,9 @@
   }
 
   window.PomodoroFocusBottom = {
-    requestLayout(context) {
-      if (!context || !["question", "answer"].includes(context.side)) return;
-      requestContext = { ...context };
-      scheduleRead(true);
-    },
-    signalFocusComplete() {},
+    receive: render,
+    signalFocusComplete,
+    refresh: scheduleRefresh,
   };
 
   start();

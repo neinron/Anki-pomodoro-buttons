@@ -4,14 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pomodoro Focus UI Harness</title>
-  <link rel="stylesheet" href="../web/pomodoro.css?v=34">
+  <link rel="stylesheet" href="../web/pomodoro.css?v=35">
+  <link rel="stylesheet" href="../web/pomodoro_bottom.css?v=1">
   <style>
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f2f3f5; color: #17181a; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    body.pf-native-review-body { margin: 0 !important; min-height: 100vh !important; display: grid; place-items: center; overflow: auto !important; background: #f2f3f5 !important; color: #17181a; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
     main { width: min(720px, 78vw); text-align: center; }
     .deck { color: #777; font-size: 13px; margin-bottom: 36px; }
     h1 { font-size: 34px; letter-spacing: -.03em; font-weight: 620; }
     p { color: #65676c; line-height: 1.6; }
-    #mock-bottom { display: none; }
+    #mock-bottom { position: fixed; right: 0; bottom: 0; left: 0; z-index: 10; background: color-mix(in srgb, #f2f3f5 72%, transparent); backdrop-filter: blur(24px); }
+    body.nightMode.pf-native-review-body { background: #15171a !important; color: #f4f5f7; }
+    body.nightMode #mock-bottom { background: color-mix(in srgb, #15171a 72%, transparent); }
   </style>
 </head>
 <body>
@@ -53,14 +56,20 @@
       }
     };
     const params = new URLSearchParams(location.search);
-    let layoutRevision = 0;
-    let requestRevision = 0;
-    let harnessCardId = "harness-card-1";
     const answerActionsHtml = `<center><table cellpadding="0" cellspacing="0"><tr>
       <td align="center"><button data-ease="1" onclick="pycmd('ease1')">Again<span class="nobold">1m</span></button></td>
       <td align="center"><button data-ease="2" onclick="pycmd('ease2')">Hard<span class="nobold">6m</span></button></td>
       <td align="center"><button data-ease="3" onclick="pycmd('ease3')">Good<span class="nobold">10m</span></button></td>
       <td align="center"><button data-ease="4" onclick="pycmd('ease4')">Easy<span class="nobold">4d</span></button></td>
+    </tr></table></center>`;
+    const twoAnswerActionsHtml = `<center><table cellpadding="0" cellspacing="0"><tr>
+      <td align="center"><button data-ease="1" onclick="pycmd('ease1')">Again<span class="nobold">1m</span></button></td>
+      <td align="center"><button data-ease="2" onclick="pycmd('ease2')">Good<span class="nobold">10m</span></button></td>
+    </tr></table></center>`;
+    const threeAnswerActionsHtml = `<center><table cellpadding="0" cellspacing="0"><tr>
+      <td align="center"><button data-ease="1" onclick="pycmd('ease1')">Again<span class="nobold">1m</span></button></td>
+      <td align="center"><button data-ease="2" onclick="pycmd('ease2')">Good<span class="nobold">10m</span></button></td>
+      <td align="center"><button data-ease="3" onclick="pycmd('ease3')">Easy<span class="nobold">4d</span></button></td>
     </tr></table></center>`;
     const secondAnswerActionsHtml = `<center><table cellpadding="0" cellspacing="0"><tr>
       <td align="center"><button data-ease="1" onclick="pycmd('ease1')">Again<span class="nobold">2m</span></button></td>
@@ -73,14 +82,14 @@
     </td></tr></table>`;
     const showNativeActions = (html) => {
       document.getElementById("middle").innerHTML = html;
-      const side = html.includes("ansbut") ? "question" : "answer";
-      setTimeout(() => window.PomodoroFocusBottom?.requestLayout({
-        request_id: ++requestRevision,
-        side,
-        card_id: harnessCardId,
-      }), 0);
     };
+    const activeAnswerActionsHtml = params.get("answers") === "2"
+      ? twoAnswerActionsHtml
+      : params.get("answers") === "3"
+        ? threeAnswerActionsHtml
+        : answerActionsHtml;
     if (params.get("side") === "question") showNativeActions(questionActionsHtml);
+    else if (["2", "3"].includes(params.get("answers"))) showNativeActions(activeAnswerActionsHtml);
     const requestedButtonHeight = Number(params.get("buttonHeight"));
     if (Number.isFinite(requestedButtonHeight) && requestedButtonHeight >= 36 && requestedButtonHeight <= 64) {
       mock.config.answer_button_height = requestedButtonHeight;
@@ -149,14 +158,15 @@
     window.pycmd = (message) => {
       if (!message.startsWith("pomodoro_focus:")) {
         if (message === "ans") {
-          showNativeActions(answerActionsHtml);
+          showNativeActions(activeAnswerActionsHtml);
           return;
         }
         if (message.startsWith("ease")) {
           mock.answer_count += 1;
+          showNativeActions(questionActionsHtml);
           setTimeout(() => {
             window.PomodoroFocus?.receive(mock);
-            window.PomodoroFocusBottom?.receive?.(mock);
+            window.PomodoroFocusBottom?.receive(mock);
           }, 0);
         }
         return;
@@ -166,42 +176,22 @@
       if (payload.action === "resume" || payload.action === "start") { mock.state = "running"; mock.pause_reason = null; }
       if (payload.action === "reset") { mock.state = "idle"; mock.remaining_seconds = mock.duration_seconds; mock.elapsed_seconds = 0; mock.answer_count = 0; }
       if (payload.action === "update_settings") Object.assign(mock.config, payload.settings);
-      if (payload.action === "study_actions") {
-        window.PomodoroFocus?.setStudyActions({
-          ...payload.layout,
-          revision: ++layoutRevision,
-          card_id: harnessCardId,
-        });
-      }
-      if (payload.action === "show_answer") showNativeActions(answerActionsHtml);
-      if (payload.action === "rate_card") {
-        mock.answer_count += 1;
-        showNativeActions(questionActionsHtml);
-      }
+      if (payload.action === "skip_card") showNativeActions(questionActionsHtml);
       if (payload.action === "open_panel") window.PomodoroFocus?.openPanel();
-      if (payload.action === "ready_bottom" && params.get("ignoreReady") !== "1") {
-        window.PomodoroFocus?.setAnswerBarMode(true);
-        const side = document.querySelector("#middle #ansbut") ? "question" : "answer";
-        window.PomodoroFocusBottom?.requestLayout({
-          request_id: ++requestRevision,
-          side,
-          card_id: harnessCardId,
-        });
-      }
       setTimeout(() => {
         window.PomodoroFocus?.receive(mock);
-        window.PomodoroFocusBottom?.receive?.(mock);
+        window.PomodoroFocusBottom?.receive(mock);
       }, 0);
     };
   </script>
-  <script src="../web/pomodoro.js?v=34"></script>
-  <script src="../web/pomodoro_bottom.js?v=16"></script>
+  <script src="../web/pomodoro.js?v=35"></script>
+  <script src="../web/pomodoro_bottom.js?v=17"></script>
   <script>
     if (params.get("signal") === "focus-complete") {
-      setTimeout(() => window.PomodoroFocus?.signalFocusComplete(), 180);
+      setTimeout(() => window.PomodoroFocusBottom?.signalFocusComplete(), 180);
     }
     if (params.get("transition") === "answer") {
-      setTimeout(() => showNativeActions(answerActionsHtml), 80);
+      setTimeout(() => showNativeActions(activeAnswerActionsHtml), 80);
     }
     if (params.get("transition") === "question") {
       setTimeout(() => showNativeActions(questionActionsHtml), 80);
@@ -209,19 +199,9 @@
     if (params.get("sequence") === "times") {
       setTimeout(() => showNativeActions(answerActionsHtml), 60);
       setTimeout(() => {
-        harnessCardId = "harness-card-2";
         showNativeActions(questionActionsHtml);
       }, 120);
       setTimeout(() => showNativeActions(secondAnswerActionsHtml), 180);
-    }
-    if (params.get("stale") === "1") {
-      setTimeout(() => window.PomodoroFocus?.setStudyActions({
-        side: "question",
-        revision: 1,
-        card_id: "old-card",
-        show_label: "Stale Answer",
-        counts: { new: "0", learn: "0", review: "0", active: "" },
-      }), 160);
     }
   </script>
 </body>

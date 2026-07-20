@@ -24,7 +24,12 @@ MESSAGE_PREFIX = "pomodoro_focus:"
 
 def _asset_version() -> str:
     digest = hashlib.sha256()
-    for name in ("pomodoro.css", "pomodoro.js", "pomodoro_bottom.js"):
+    for name in (
+        "pomodoro.css",
+        "pomodoro.js",
+        "pomodoro_bottom.css",
+        "pomodoro_bottom.js",
+    ):
         try:
             digest.update((ADDON_DIR / "web" / name).read_bytes())
         except OSError:
@@ -58,10 +63,6 @@ class PomodoroController:
         self.timer.setInterval(500)
         self.timer.timeout.connect(self.on_tick)
         self.last_persist_mono = 0.0
-        self.study_layout_revision = 0
-        self.study_request_revision = 0
-        self.study_layout: dict[str, Any] | None = None
-        self.study_counts: dict[str, Any] = {}
         application = QApplication.instance()
         if application is not None:
             application.applicationStateChanged.connect(
@@ -88,21 +89,14 @@ class PomodoroController:
             now_wall=datetime.now().astimezone(),
         )
         self.last_persist_mono = time.monotonic()
-        self.study_layout_revision = 0
-        self.study_request_revision = 0
-        self.study_layout = None
-        self.study_counts = {}
         self.timer.start()
 
     def on_profile_close(self) -> None:
-        self.set_native_bottom_visible(True)
         if self.engine is not None:
             self.engine.pause("app_closed", time.monotonic())
             self.persist()
         self.timer.stop()
         self.engine = None
-        self.study_layout = None
-        self.study_counts = {}
 
     def persist(self) -> None:
         if self.engine is None or mw.pm.name is None:
@@ -167,12 +161,6 @@ class PomodoroController:
         if mw.state != "review":
             return
         reviewer = getattr(mw, "reviewer", None)
-        web = getattr(reviewer, "web", None)
-        if web is not None:
-            web.eval(
-                "window.PomodoroFocus && "
-                "window.PomodoroFocus.signalFocusComplete();"
-            )
         bottom = getattr(reviewer, "bottom", None)
         bottom_web = getattr(bottom, "web", None)
         if bottom_web is not None:
@@ -191,16 +179,14 @@ class PomodoroController:
 
     def on_state_change(self, new_state: str, old_state: str) -> None:
         if new_state == "review":
-            self.set_native_bottom_visible(False)
-        elif old_state == "review":
-            self.set_native_bottom_visible(True)
+            QTimer.singleShot(0, self.adjust_bottom_height)
         if old_state == "review" and new_state != "review":
             self.pause_focus_while_away("reviewer_left")
 
-    def set_native_bottom_visible(self, visible: bool) -> None:
+    def adjust_bottom_height(self) -> None:
         bottom_web = getattr(mw, "bottomWeb", None)
         if bottom_web is not None:
-            bottom_web.setVisible(visible)
+            bottom_web.adjustHeightToFit()
 
     def on_reviewer_will_end(self) -> None:
         self.pause_focus_while_away("reviewer_left")
@@ -222,7 +208,6 @@ class PomodoroController:
             return
         self.engine.register_activity(time.monotonic())
         self.broadcast()
-        QTimer.singleShot(0, self.request_study_layout)
 
     def on_reviewer_answer(self, _reviewer: Any, _card: Any, _ease: int) -> None:
         if self.engine is None:
@@ -256,84 +241,14 @@ class PomodoroController:
         event: str | None = None
 
         if action == "ready":
-            reviewer = getattr(mw, "reviewer", None)
-            web = getattr(reviewer, "web", None)
-            if web is not None:
-                web.eval(
-                    "window.PomodoroFocus && "
-                    "window.PomodoroFocus.setAnswerBarMode(true);"
-                )
             self.broadcast()
-            self.push_cached_study_layout()
-            QTimer.singleShot(0, self.request_study_layout)
             return (True, None)
         if action == "ready_bottom":
-            self.set_native_bottom_visible(False)
-            reviewer = getattr(mw, "reviewer", None)
-            web = getattr(reviewer, "web", None)
-            if web is not None:
-                web.eval(
-                    "window.PomodoroFocus && "
-                    "window.PomodoroFocus.setAnswerBarMode(true);"
-                )
             self.broadcast()
-            QTimer.singleShot(0, self.request_study_layout)
-            return (True, None)
-        if action == "study_actions":
-            layout = payload.get("layout")
-            if isinstance(layout, dict):
-                reviewer = getattr(mw, "reviewer", None)
-                current_side = getattr(reviewer, "state", None)
-                card = getattr(reviewer, "card", None)
-                card_id = getattr(card, "id", None)
-                side = layout.get("side")
-                request = layout.pop("request", None)
-                if (
-                    side != current_side
-                    or card_id is None
-                    or not isinstance(request, dict)
-                    or request.get("request_id") != self.study_request_revision
-                    or request.get("side") != current_side
-                    or request.get("card_id") != str(card_id)
-                ):
-                    return (True, None)
-                validated = dict(layout)
-                counts = validated.get("counts")
-                if side == "question" and isinstance(counts, dict):
-                    self.study_counts = dict(counts)
-                elif side == "answer" and self.study_counts:
-                    validated["counts"] = dict(self.study_counts)
-                self.study_layout_revision += 1
-                validated["revision"] = self.study_layout_revision
-                validated["card_id"] = str(card_id)
-                self.study_layout = validated
-                self.push_study_layout(validated)
+            QTimer.singleShot(0, self.adjust_bottom_height)
             return (True, None)
         if action == "open_panel":
             self.open_panel()
-            return (True, None)
-        if action == "edit_card":
-            if mw.state == "review":
-                mw.onEditCurrent()
-            return (True, None)
-        if action == "more_actions":
-            reviewer = getattr(mw, "reviewer", None)
-            if reviewer is not None and mw.state == "review":
-                reviewer.showContextMenu()
-            return (True, None)
-        if action == "show_answer":
-            reviewer = getattr(mw, "reviewer", None)
-            if reviewer is not None and mw.state == "review":
-                reviewer._getTypedAnswer()
-            return (True, None)
-        if action == "rate_card":
-            reviewer = getattr(mw, "reviewer", None)
-            try:
-                ease = int(payload.get("ease"))
-            except (TypeError, ValueError):
-                ease = 0
-            if reviewer is not None and mw.state == "review" and 1 <= ease <= 4:
-                reviewer._answerCard(ease)
             return (True, None)
         if action == "card_info":
             reviewer = getattr(mw, "reviewer", None)
@@ -381,6 +296,8 @@ class PomodoroController:
                     clean_patch, now_mono, now_wall
                 )
                 mw.addonManager.writeConfig(__name__, self.engine.config)
+                if "answer_button_height" in clean_patch:
+                    QTimer.singleShot(0, self.adjust_bottom_height)
 
         if event is not None:
             self.handle_completion(event, now_mono, now_wall)
@@ -404,52 +321,12 @@ class PomodoroController:
         web.eval(
             "window.PomodoroFocus && window.PomodoroFocus.receive(" + data + ");"
         )
-
-    def push_study_layout(self, layout: dict[str, Any]) -> None:
-        reviewer = getattr(mw, "reviewer", None)
-        web = getattr(reviewer, "web", None)
-        if web is None:
-            return
-        data = json.dumps(layout, ensure_ascii=False, separators=(",", ":"))
-        web.eval(
-            "window.PomodoroFocus && "
-            "window.PomodoroFocus.setStudyActions(" + data + ");"
-        )
-
-    def push_cached_study_layout(self) -> None:
-        layout = self.study_layout
-        reviewer = getattr(mw, "reviewer", None)
-        card = getattr(reviewer, "card", None)
-        if (
-            layout is None
-            or layout.get("side") != getattr(reviewer, "state", None)
-            or layout.get("card_id") != str(getattr(card, "id", ""))
-        ):
-            return
-        self.push_study_layout(layout)
-
-    def request_study_layout(self) -> None:
-        if mw.state != "review":
-            return
-        reviewer = getattr(mw, "reviewer", None)
         bottom = getattr(reviewer, "bottom", None)
         bottom_web = getattr(bottom, "web", None)
-        card = getattr(reviewer, "card", None)
-        side = getattr(reviewer, "state", None)
-        card_id = getattr(card, "id", None)
-        if bottom_web is not None and side in {"question", "answer"} and card_id is not None:
-            self.study_request_revision += 1
-            request = json.dumps(
-                {
-                    "request_id": self.study_request_revision,
-                    "side": side,
-                    "card_id": str(card_id),
-                },
-                separators=(",", ":"),
-            )
+        if bottom_web is not None:
             bottom_web.eval(
                 "window.PomodoroFocusBottom && "
-                "window.PomodoroFocusBottom.requestLayout(" + request + ");"
+                "window.PomodoroFocusBottom.receive(" + data + ");"
             )
 
     def open_panel(self) -> None:
@@ -479,6 +356,9 @@ def inject_web_assets(web_content: Any, context: Any) -> None:
             f'<script src="/_addons/{package}/web/pomodoro.js?v={ASSET_VERSION}"></script>'
         )
     elif isinstance(context, ReviewerBottomBar):
+        web_content.css.append(
+            f"/_addons/{package}/web/pomodoro_bottom.css?v={ASSET_VERSION}"
+        )
         web_content.body += (
             f'<script src="/_addons/{package}/web/pomodoro_bottom.js?v={ASSET_VERSION}"></script>'
         )

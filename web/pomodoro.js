@@ -64,52 +64,13 @@
   let snapshot = null;
   let panelOpen = false;
   let historyOpen = false;
-  let completionSignalTimer = null;
   let lastActivitySent = 0;
-  let studyActions = null;
-  let latestStudyLayoutRevision = 0;
-  let liquidGlassFrame = null;
-  const liquidFilterCache = new Map();
-  const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
   const root = document.getElementById("pomodoro-focus-root");
   if (!root) return;
 
   root.innerHTML = `
     <div class="pf-shell pf-answer-bar-mode">
-      <svg class="pf-liquid-definitions" aria-hidden="true" focusable="false">
-        <defs id="pf-liquid-filter-defs"></defs>
-      </svg>
-
-      <div class="pf-review-bar" id="pf-review-bar" aria-label="Review controls">
-        <div class="pf-review-edge pf-review-left">
-          <button class="pf-review-control pf-review-timer" id="pf-review-timer" type="button" aria-label="Open Pomodoro Focus">
-            <span class="pf-review-time">25</span>
-            <svg class="pf-review-ring" viewBox="0 0 40 40" aria-hidden="true">
-              <circle class="pf-review-ring-track" pathLength="100" cx="20" cy="20" r="16"></circle>
-              <circle class="pf-review-ring-fill" pathLength="100" cx="20" cy="20" r="16"></circle>
-            </svg>
-          </button>
-          <div class="pf-review-counts" id="pf-review-counts" aria-label="New, learning, and review card counts">
-            <span class="pf-review-count-card pf-review-new" id="pf-review-new" title="New cards"></span>
-            <span class="pf-review-count-card pf-review-learn" id="pf-review-learn" title="Learning cards"></span>
-            <span class="pf-review-count-card pf-review-due" id="pf-review-due" title="Review cards"></span>
-          </div>
-        </div>
-        <div class="pf-review-actions" id="pf-review-actions"></div>
-        <div class="pf-review-edge pf-review-right">
-          <button class="pf-review-control pf-review-utility" id="pf-review-edit" type="button" aria-label="Edit" title="Edit">
-            <span class="pf-sf-symbol pf-sf-square-and-pencil" aria-hidden="true"></span>
-          </button>
-          <button class="pf-review-control pf-review-utility" id="pf-review-info" type="button" aria-label="Info" title="Info">
-            <span class="pf-sf-symbol pf-sf-info-circle" aria-hidden="true"></span>
-          </button>
-          <button class="pf-review-control pf-review-utility" id="pf-review-more" type="button" aria-label="More" title="More">
-            <span class="pf-sf-symbol pf-sf-ellipsis" aria-hidden="true"></span>
-          </button>
-        </div>
-      </div>
-
       <section class="pf-panel" id="pf-panel" role="dialog" aria-label="Pomodoro Focus controls" aria-hidden="true">
         <div class="pf-panel-inner">
           <div class="pf-timer-header">
@@ -247,120 +208,6 @@
   const panel = $("#pf-panel");
   const confirmLayer = $("#pf-confirm");
   let confirmAction = null;
-
-  function roundedRectangleDistance(x, y, width, height, radius) {
-    const qx = Math.abs(x - width / 2) - (width / 2 - radius);
-    const qy = Math.abs(y - height / 2) - (height / 2 - radius);
-    return Math.hypot(Math.max(qx, 0), Math.max(qy, 0))
-      + Math.min(Math.max(qx, qy), 0)
-      - radius;
-  }
-
-  function liquidDisplacementMap(width, height, radius, bezel) {
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext("2d");
-    if (!context) return "";
-    const image = context.createImageData(width, height);
-    const pixels = image.data;
-
-    for (let y = 0; y < height; y += 1) {
-      for (let x = 0; x < width; x += 1) {
-        const offset = (y * width + x) * 4;
-        const distance = -roundedRectangleDistance(x + .5, y + .5, width, height, radius);
-        let red = 128;
-        let green = 128;
-        if (distance >= 0 && distance < bezel) {
-          const gradientX = roundedRectangleDistance(x + 1.5, y + .5, width, height, radius)
-            - roundedRectangleDistance(x - .5, y + .5, width, height, radius);
-          const gradientY = roundedRectangleDistance(x + .5, y + 1.5, width, height, radius)
-            - roundedRectangleDistance(x + .5, y - .5, width, height, radius);
-          const length = Math.hypot(gradientX, gradientY) || 1;
-          const edge = 1 - distance / bezel;
-          const strength = edge * edge * (3 - 2 * edge);
-          red = Math.round(128 - gradientX / length * strength * 127);
-          green = Math.round(128 - gradientY / length * strength * 127);
-        }
-        pixels[offset] = Math.max(0, Math.min(255, red));
-        pixels[offset + 1] = Math.max(0, Math.min(255, green));
-        pixels[offset + 2] = 128;
-        pixels[offset + 3] = 255;
-      }
-    }
-    context.putImageData(image, 0, 0);
-    return canvas.toDataURL("image/png");
-  }
-
-  function liquidFilterFor(width, height, radius) {
-    const safeWidth = Math.max(1, Math.round(width));
-    const safeHeight = Math.max(1, Math.round(height));
-    const safeRadius = Math.max(1, Math.min(Math.round(radius), Math.floor(safeHeight / 2)));
-    const bezel = Math.max(7, Math.min(14, Math.round(safeHeight * .24)));
-    const key = `${safeWidth}-${safeHeight}-${safeRadius}-${bezel}`;
-    if (liquidFilterCache.has(key)) return liquidFilterCache.get(key);
-
-    const definitions = $("#pf-liquid-filter-defs");
-    const id = `pf-liquid-${key}`;
-    const filter = document.createElementNS(SVG_NAMESPACE, "filter");
-    filter.setAttribute("id", id);
-    filter.setAttribute("x", "0");
-    filter.setAttribute("y", "0");
-    filter.setAttribute("width", String(safeWidth));
-    filter.setAttribute("height", String(safeHeight));
-    filter.setAttribute("filterUnits", "userSpaceOnUse");
-    filter.setAttribute("primitiveUnits", "userSpaceOnUse");
-    filter.setAttribute("color-interpolation-filters", "sRGB");
-
-    const map = document.createElementNS(SVG_NAMESPACE, "feImage");
-    const mapUrl = liquidDisplacementMap(safeWidth, safeHeight, safeRadius, bezel);
-    map.setAttribute("href", mapUrl);
-    map.setAttribute("x", "0");
-    map.setAttribute("y", "0");
-    map.setAttribute("width", String(safeWidth));
-    map.setAttribute("height", String(safeHeight));
-    map.setAttribute("preserveAspectRatio", "none");
-    map.setAttribute("result", "pf-displacement-map");
-
-    const displacement = document.createElementNS(SVG_NAMESPACE, "feDisplacementMap");
-    displacement.setAttribute("in", "SourceGraphic");
-    displacement.setAttribute("in2", "pf-displacement-map");
-    displacement.setAttribute("scale", String(Math.max(3.5, Math.min(6, safeHeight * .1))));
-    displacement.setAttribute("xChannelSelector", "R");
-    displacement.setAttribute("yChannelSelector", "G");
-
-    filter.append(map, displacement);
-    definitions.append(filter);
-    liquidFilterCache.set(key, id);
-    return id;
-  }
-
-  function applyLiquidGlass() {
-    liquidGlassFrame = null;
-    const supportsSvgBackdrop = typeof CSS !== "undefined"
-      && typeof CSS.supports === "function"
-      && (CSS.supports("backdrop-filter", "url(#pf-liquid-probe)")
-        || CSS.supports("-webkit-backdrop-filter", "url(#pf-liquid-probe)"));
-    const shell = $(".pf-shell");
-    shell.classList.toggle("pf-liquid-svg-supported", supportsSvgBackdrop);
-    if (!supportsSvgBackdrop) return;
-
-    root.querySelectorAll(".pf-review-control, .pf-review-counts").forEach((element) => {
-      const bounds = element.getBoundingClientRect();
-      if (bounds.width < 1 || bounds.height < 1) return;
-      const radius = Number(getComputedStyle(element).borderRadius.replace("px", "")) || bounds.height / 4;
-      const filterId = liquidFilterFor(bounds.width, bounds.height, radius);
-      if (element.dataset.liquidFilter === filterId) return;
-      element.dataset.liquidFilter = filterId;
-      element.style.setProperty("--pf-liquid-filter", `url("#${filterId}")`);
-      element.classList.add("pf-liquid-svg");
-    });
-  }
-
-  function scheduleLiquidGlass() {
-    if (liquidGlassFrame !== null) cancelAnimationFrame(liquidGlassFrame);
-    liquidGlassFrame = requestAnimationFrame(applyLiquidGlass);
-  }
 
   function send(action, data = {}) {
     if (typeof pycmd === "function") {
@@ -547,114 +394,6 @@
     $("#pf-history-note").textContent = `Today: ${today.completed} completed · ${today.answers} cards reviewed`;
   }
 
-  function renderReviewBar(data) {
-    const height = Math.max(36, Math.min(64, Number(data.config.answer_button_height) || 44));
-    $(".pf-shell").style.setProperty("--pf-review-height", `${height}px`);
-    const timer = $("#pf-review-timer");
-    const indicator = data.config.answer_timer_style === "circle" ? "circle" : "time";
-    const duration = Math.max(1, Number(data.duration_seconds) || 1);
-    const remaining = Math.max(0, Number(data.remaining_seconds) || 0);
-    const remainingProgress = Math.max(0, Math.min(1, remaining / duration));
-    const visualProgress = data.phase === "focus" ? 1 - remainingProgress : remainingProgress;
-    timer.dataset.indicator = indicator;
-    timer.dataset.state = data.state === "running" ? "running" : "inactive";
-    timer.dataset.phase = data.phase;
-    timer.title = `${phaseLabel(data.phase)} · ${mmss(remaining)}`;
-    timer.querySelector(".pf-review-time").textContent = indicator === "circle"
-      ? String(Math.ceil(remaining / 60))
-      : mmss(remaining);
-    timer.querySelector(".pf-review-ring-fill").style.strokeDasharray = `${visualProgress * 87.5} 100`;
-    scheduleReviewActionsPosition();
-    scheduleLiquidGlass();
-  }
-
-  function positionReviewActions() {
-    const bar = $("#pf-review-bar");
-    const left = $(".pf-review-left");
-    const right = $(".pf-review-right");
-    const actions = $("#pf-review-actions");
-    const barRect = bar.getBoundingClientRect();
-    const leftRect = left.getBoundingClientRect();
-    const rightRect = right.getBoundingClientRect();
-    if (!barRect.width || !leftRect.width || !rightRect.width) return;
-    const corridorLeft = leftRect.right - barRect.left + 14;
-    const corridorRight = rightRect.left - barRect.left - 14;
-    actions.style.left = `${(corridorLeft + corridorRight) / 2}px`;
-  }
-
-  function scheduleReviewActionsPosition() {
-    requestAnimationFrame(positionReviewActions);
-  }
-
-  function makeStudyButton(label, className, action, due = "") {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `pf-review-control ${className}`;
-    button.dataset.action = action;
-    const text = document.createElement("span");
-    text.textContent = label;
-    button.append(text);
-    if (due) {
-      const timing = document.createElement("span");
-      timing.className = "pf-review-due-label";
-      timing.textContent = due;
-      button.append(timing);
-    }
-    return button;
-  }
-
-  function setStudyActions(layout) {
-    if (!layout || !["question", "answer"].includes(layout.side)) return;
-    const revision = Number(layout.revision);
-    if (Number.isFinite(revision)) {
-      if (revision <= latestStudyLayoutRevision) return;
-      latestStudyLayoutRevision = revision;
-    }
-    const priorCounts = studyActions?.counts;
-    studyActions = layout;
-    const editLabel = layout.edit_label || "Edit";
-    const moreLabel = layout.more_label || "More";
-    $("#pf-review-edit").setAttribute("aria-label", editLabel);
-    $("#pf-review-edit").title = editLabel;
-    $("#pf-review-more").setAttribute("aria-label", moreLabel);
-    $("#pf-review-more").title = moreLabel;
-    const actions = $("#pf-review-actions");
-    actions.replaceChildren();
-    const counts = $("#pf-review-counts");
-    const values = layout.counts || priorCounts || {};
-    $("#pf-review-new").textContent = values.new || "0";
-    $("#pf-review-learn").textContent = values.learn || "0";
-    $("#pf-review-due").textContent = values.review || "0";
-    if (["new", "learn", "review"].includes(values.active)) {
-      counts.dataset.active = values.active;
-    } else {
-      delete counts.dataset.active;
-    }
-    ["new", "learn", "review"].forEach((kind) => {
-      const id = kind === "review" ? "#pf-review-due" : `#pf-review-${kind}`;
-      $(id).classList.toggle("pf-review-current", values.active === kind);
-    });
-    if (layout.side === "question") {
-      actions.append(
-        makeStudyButton("Skip", "pf-review-skip", "skip_card"),
-        makeStudyButton(layout.show_label || "Show Answer", "pf-review-show", "show_answer")
-      );
-    } else {
-      (layout.buttons || []).forEach((item) => {
-        const button = makeStudyButton(
-          item.label || "",
-          `pf-review-answer pf-review-ease-${Number(item.ease) || 0}`,
-          "rate_card",
-          item.due || ""
-        );
-        button.dataset.ease = String(item.ease);
-        actions.append(button);
-      });
-    }
-    scheduleReviewActionsPosition();
-    scheduleLiquidGlass();
-  }
-
   function render(data) {
     snapshot = data;
     const shell = $(".pf-shell");
@@ -698,25 +437,18 @@
     $("#pf-focus-hide").setAttribute("aria-checked", String(Boolean(data.config.focus_hide)));
     $("#pf-sound").setAttribute("aria-checked", String(Boolean(data.config.completion_sound)));
 
-    renderReviewBar(data);
-
     renderHistory(data);
     positionPanel();
   }
 
   function positionPanel() {
     if (!panelOpen) return;
-    const anchor = $("#pf-review-timer");
-    const anchorRect = anchor.getBoundingClientRect();
-    const availableHeight = anchorRect.top - VIEW_MARGIN - 12;
+    const availableHeight = window.innerHeight - VIEW_MARGIN * 2;
     panel.style.maxHeight = `${Math.max(160, Math.min(720, availableHeight))}px`;
     const width = panel.offsetWidth || 380;
     const height = panel.offsetHeight || Math.min(720, availableHeight);
-    const left = Math.max(
-      VIEW_MARGIN,
-      Math.min(window.innerWidth - width - VIEW_MARGIN, anchorRect.left)
-    );
-    const top = Math.max(VIEW_MARGIN, anchorRect.top - height - 12);
+    const left = Math.max(VIEW_MARGIN, Math.min(window.innerWidth - width - VIEW_MARGIN, 16));
+    const top = Math.max(VIEW_MARGIN, window.innerHeight - height - 12);
     panel.style.left = `${left}px`;
     panel.style.top = `${top}px`;
   }
@@ -735,27 +467,6 @@
     hideConfirm();
     panel.classList.remove("pf-open");
     panel.setAttribute("aria-hidden", "true");
-  }
-
-  function signalFocusComplete() {
-    clearTimeout(completionSignalTimer);
-    const reviewLauncher = $("#pf-review-timer");
-    reviewLauncher.classList.remove("pf-review-complete");
-    void reviewLauncher.offsetWidth;
-    reviewLauncher.classList.add("pf-review-complete");
-    completionSignalTimer = setTimeout(
-      () => {
-        reviewLauncher.classList.remove("pf-review-complete");
-      },
-      1200
-    );
-  }
-
-  function setAnswerBarMode(enabled) {
-    $(".pf-shell").classList.add("pf-answer-bar-mode");
-    scheduleReviewActionsPosition();
-    scheduleLiquidGlass();
-    if (panelOpen) requestAnimationFrame(positionPanel);
   }
 
   function reportActivity(force = false) {
@@ -812,17 +523,6 @@
   });
 
   $("#pf-skip").addEventListener("click", () => send("skip"));
-  $("#pf-review-edit").addEventListener("click", () => send("edit_card"));
-  $("#pf-review-timer").addEventListener("click", openPanel);
-  $("#pf-review-info").addEventListener("click", () => send("card_info"));
-  $("#pf-review-more").addEventListener("click", () => send("more_actions"));
-  $("#pf-review-actions").addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-action]");
-    if (!button) return;
-    const action = button.dataset.action;
-    if (action === "rate_card") send(action, { ease: Number(button.dataset.ease) });
-    else send(action);
-  });
   $("#pf-preset").addEventListener("pf-change", (event) => sendSettings({ preset: event.detail.value }));
   $("#pf-focus-minutes").addEventListener("change", (event) => sendSettings({ focus_minutes: Number(event.target.value) }));
   $("#pf-short-minutes").addEventListener("change", (event) => sendSettings({ short_break_minutes: Number(event.target.value) }));
@@ -881,7 +581,7 @@
     reportActivity();
     const activeSelect = event.target.closest?.(".pf-select") || null;
     closeCustomSelects(activeSelect);
-    if (panelOpen && !panel.contains(event.target) && !$("#pf-review-timer").contains(event.target)) closePanel();
+    if (panelOpen && !panel.contains(event.target)) closePanel();
   }, { passive: true });
   document.addEventListener("pointermove", () => reportActivity(), { passive: true });
   document.addEventListener("keydown", (event) => {
@@ -894,8 +594,6 @@
     }
   });
   window.addEventListener("resize", () => {
-    scheduleReviewActionsPosition();
-    scheduleLiquidGlass();
     positionPanel();
   });
 
@@ -903,9 +601,6 @@
     receive: render,
     openPanel,
     closePanel,
-    signalFocusComplete,
-    setAnswerBarMode,
-    setStudyActions,
   };
 
   send("ready");
