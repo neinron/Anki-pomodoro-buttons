@@ -286,16 +286,23 @@ button.pf-native-show {
 }
 
 button.pf-native-answer {
+  position: relative;
   width: clamp(92px, 9.2vw, 150px) !important;
+  padding: 0 16px 9px !important;
 }
 
 button.pf-native-answer .nobold {
-  display: block;
-  margin-top: clamp(2px, calc(var(--pf-native-height) * .055), 4px);
+  position: absolute;
+  right: 0;
+  bottom: clamp(4px, calc(var(--pf-native-height) * .1), 7px);
+  left: 0;
+  display: block !important;
+  margin: 0;
   color: var(--pf-native-secondary) !important;
   font-size: clamp(9px, calc(6.1px + var(--pf-native-height) * .085), 12px) !important;
   font-weight: 520 !important;
   line-height: 1 !important;
+  pointer-events: none;
 }
 
 button.pf-native-answer .nobold br { display: none; }
