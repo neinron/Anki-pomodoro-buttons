@@ -113,6 +113,9 @@
   let displayedMinutes = 25;
   let answerBarMode = true;
   let studyActions = null;
+  let liquidGlassFrame = null;
+  const liquidFilterCache = new Map();
+  const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
   const root = document.getElementById("pomodoro-focus-root");
   if (!root) return;
@@ -129,6 +132,10 @@
           <path class="pf-card-ring-progress" id="pf-card-ring-progress"></path>
         </svg>
       </button>
+
+      <svg class="pf-liquid-definitions" aria-hidden="true" focusable="false">
+        <defs id="pf-liquid-filter-defs"></defs>
+      </svg>
 
       <div class="pf-review-bar" id="pf-review-bar" aria-label="Review controls">
         <div class="pf-review-edge pf-review-left">
@@ -313,6 +320,120 @@
   const panel = $("#pf-panel");
   const confirmLayer = $("#pf-confirm");
   let confirmAction = null;
+
+  function roundedRectangleDistance(x, y, width, height, radius) {
+    const qx = Math.abs(x - width / 2) - (width / 2 - radius);
+    const qy = Math.abs(y - height / 2) - (height / 2 - radius);
+    return Math.hypot(Math.max(qx, 0), Math.max(qy, 0))
+      + Math.min(Math.max(qx, qy), 0)
+      - radius;
+  }
+
+  function liquidDisplacementMap(width, height, radius, bezel) {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return "";
+    const image = context.createImageData(width, height);
+    const pixels = image.data;
+
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const offset = (y * width + x) * 4;
+        const distance = -roundedRectangleDistance(x + .5, y + .5, width, height, radius);
+        let red = 128;
+        let green = 128;
+        if (distance >= 0 && distance < bezel) {
+          const gradientX = roundedRectangleDistance(x + 1.5, y + .5, width, height, radius)
+            - roundedRectangleDistance(x - .5, y + .5, width, height, radius);
+          const gradientY = roundedRectangleDistance(x + .5, y + 1.5, width, height, radius)
+            - roundedRectangleDistance(x + .5, y - .5, width, height, radius);
+          const length = Math.hypot(gradientX, gradientY) || 1;
+          const edge = 1 - distance / bezel;
+          const strength = edge * edge * (3 - 2 * edge);
+          red = Math.round(128 - gradientX / length * strength * 127);
+          green = Math.round(128 - gradientY / length * strength * 127);
+        }
+        pixels[offset] = Math.max(0, Math.min(255, red));
+        pixels[offset + 1] = Math.max(0, Math.min(255, green));
+        pixels[offset + 2] = 128;
+        pixels[offset + 3] = 255;
+      }
+    }
+    context.putImageData(image, 0, 0);
+    return canvas.toDataURL("image/png");
+  }
+
+  function liquidFilterFor(width, height, radius) {
+    const safeWidth = Math.max(1, Math.round(width));
+    const safeHeight = Math.max(1, Math.round(height));
+    const safeRadius = Math.max(1, Math.min(Math.round(radius), Math.floor(safeHeight / 2)));
+    const bezel = Math.max(7, Math.min(14, Math.round(safeHeight * .24)));
+    const key = `${safeWidth}-${safeHeight}-${safeRadius}-${bezel}`;
+    if (liquidFilterCache.has(key)) return liquidFilterCache.get(key);
+
+    const definitions = $("#pf-liquid-filter-defs");
+    const id = `pf-liquid-${key}`;
+    const filter = document.createElementNS(SVG_NAMESPACE, "filter");
+    filter.setAttribute("id", id);
+    filter.setAttribute("x", "0");
+    filter.setAttribute("y", "0");
+    filter.setAttribute("width", String(safeWidth));
+    filter.setAttribute("height", String(safeHeight));
+    filter.setAttribute("filterUnits", "userSpaceOnUse");
+    filter.setAttribute("primitiveUnits", "userSpaceOnUse");
+    filter.setAttribute("color-interpolation-filters", "sRGB");
+
+    const map = document.createElementNS(SVG_NAMESPACE, "feImage");
+    const mapUrl = liquidDisplacementMap(safeWidth, safeHeight, safeRadius, bezel);
+    map.setAttribute("href", mapUrl);
+    map.setAttribute("x", "0");
+    map.setAttribute("y", "0");
+    map.setAttribute("width", String(safeWidth));
+    map.setAttribute("height", String(safeHeight));
+    map.setAttribute("preserveAspectRatio", "none");
+    map.setAttribute("result", "pf-displacement-map");
+
+    const displacement = document.createElementNS(SVG_NAMESPACE, "feDisplacementMap");
+    displacement.setAttribute("in", "SourceGraphic");
+    displacement.setAttribute("in2", "pf-displacement-map");
+    displacement.setAttribute("scale", String(Math.max(3.5, Math.min(6, safeHeight * .1))));
+    displacement.setAttribute("xChannelSelector", "R");
+    displacement.setAttribute("yChannelSelector", "G");
+
+    filter.append(map, displacement);
+    definitions.append(filter);
+    liquidFilterCache.set(key, id);
+    return id;
+  }
+
+  function applyLiquidGlass() {
+    liquidGlassFrame = null;
+    const supportsSvgBackdrop = typeof CSS !== "undefined"
+      && typeof CSS.supports === "function"
+      && (CSS.supports("backdrop-filter", "url(#pf-liquid-probe)")
+        || CSS.supports("-webkit-backdrop-filter", "url(#pf-liquid-probe)"));
+    const shell = $(".pf-shell");
+    shell.classList.toggle("pf-liquid-svg-supported", supportsSvgBackdrop);
+    if (!supportsSvgBackdrop || !answerBarMode) return;
+
+    root.querySelectorAll(".pf-review-control, .pf-review-count-card").forEach((element) => {
+      const bounds = element.getBoundingClientRect();
+      if (bounds.width < 1 || bounds.height < 1) return;
+      const radius = Number(getComputedStyle(element).borderRadius.replace("px", "")) || bounds.height / 4;
+      const filterId = liquidFilterFor(bounds.width, bounds.height, radius);
+      if (element.dataset.liquidFilter === filterId) return;
+      element.dataset.liquidFilter = filterId;
+      element.style.setProperty("--pf-liquid-filter", `url("#${filterId}")`);
+      element.classList.add("pf-liquid-svg");
+    });
+  }
+
+  function scheduleLiquidGlass() {
+    if (liquidGlassFrame !== null) cancelAnimationFrame(liquidGlassFrame);
+    liquidGlassFrame = requestAnimationFrame(applyLiquidGlass);
+  }
 
   function send(action, data = {}) {
     if (typeof pycmd === "function") {
@@ -585,6 +706,7 @@
     timer.querySelector(".pf-review-progress-fill").style.width = `${visualProgress * 100}%`;
     timer.querySelector(".pf-review-ring-fill").style.strokeDasharray = `${visualProgress * 87.5} 100`;
     scheduleReviewActionsPosition();
+    scheduleLiquidGlass();
   }
 
   function positionReviewActions() {
@@ -659,6 +781,7 @@
       });
     }
     scheduleReviewActionsPosition();
+    scheduleLiquidGlass();
   }
 
   function render(data) {
@@ -812,6 +935,7 @@
     answerBarMode = Boolean(enabled);
     $(".pf-shell").classList.toggle("pf-answer-bar-mode", answerBarMode);
     scheduleReviewActionsPosition();
+    scheduleLiquidGlass();
     if (panelOpen) requestAnimationFrame(positionPanel);
   }
 
@@ -1020,6 +1144,7 @@
   window.addEventListener("resize", () => {
     if (snapshot) applyPosition(snapshot.position);
     scheduleReviewActionsPosition();
+    scheduleLiquidGlass();
     positionPanel();
   });
 
