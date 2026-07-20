@@ -211,7 +211,7 @@
         intervalLabel.style.setProperty("order", "1", "important");
         intervalLabel.style.setProperty("display", "block", "important");
         intervalLabel.style.setProperty("color", "var(--pf-native-secondary)", "important");
-        intervalLabel.style.setProperty("font-size", "12px", "important");
+        intervalLabel.style.setProperty("font-size", "10px", "important");
         intervalLabel.style.setProperty("font-weight", "400", "important");
         intervalLabel.style.setProperty("line-height", "1", "important");
         intervalLabel.style.setProperty("font-variant-numeric", "tabular-nums", "important");
