@@ -304,13 +304,15 @@ button.pf-native-answer-interval {
 }
 
 button.pf-native-answer-label {
+  order: 2;
   font: inherit;
 }
 
 button.pf-native-answer-interval {
+  order: 1;
   color: var(--pf-native-secondary) !important;
-  font-size: clamp(10px, calc(6.5px + var(--pf-native-height) * .1), 13px) !important;
-  font-weight: 520 !important;
+  font-size: clamp(9px, calc(5.8px + var(--pf-native-height) * .085), 12px) !important;
+  font-weight: 400 !important;
   font-variant-numeric: tabular-nums;
 }
 
