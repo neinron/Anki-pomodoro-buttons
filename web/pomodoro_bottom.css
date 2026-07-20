@@ -286,27 +286,32 @@ button.pf-native-show {
 }
 
 button.pf-native-answer {
-  position: relative;
   width: clamp(92px, 9.2vw, 150px) !important;
-  padding: 0 16px 9px !important;
+  gap: clamp(2px, calc(var(--pf-native-height) * .06), 4px);
+  padding: 0 16px !important;
 }
 
 button.pf-native-answer .nobold {
   display: none !important;
 }
 
-button.pf-native-answer::after {
-  position: absolute;
-  right: 0;
-  bottom: clamp(4px, calc(var(--pf-native-height) * .1), 7px);
-  left: 0;
+button.pf-native-answer-label,
+button.pf-native-answer-interval {
   display: block;
-  content: attr(data-pf-interval);
+  line-height: 1 !important;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+button.pf-native-answer-label {
+  font: inherit;
+}
+
+button.pf-native-answer-interval {
   color: var(--pf-native-secondary) !important;
   font-size: clamp(10px, calc(6.5px + var(--pf-native-height) * .1), 13px) !important;
   font-weight: 520 !important;
-  line-height: 1 !important;
-  pointer-events: none;
+  font-variant-numeric: tabular-nums;
 }
 
 button.pf-native-ease-1 {

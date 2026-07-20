@@ -177,8 +177,29 @@
       answerButtons.forEach((button) => {
         const ease = answerEase(button);
         const interval = button.querySelector(".nobold");
+        const labelText = [...button.childNodes]
+          .filter((node) => node.nodeType === Node.TEXT_NODE)
+          .map((node) => node.textContent.trim())
+          .filter(Boolean)
+          .join(" ");
+        let label = button.querySelector(".pf-native-answer-label");
+        let intervalLabel = button.querySelector(".pf-native-answer-interval");
+        if (!label) {
+          label = document.createElement("span");
+          label.className = "pf-native-answer-label";
+          button.prepend(label);
+        }
+        if (!intervalLabel) {
+          intervalLabel = document.createElement("span");
+          intervalLabel.className = "pf-native-answer-interval";
+          button.append(intervalLabel);
+        }
+        [...button.childNodes]
+          .filter((node) => node.nodeType === Node.TEXT_NODE)
+          .forEach((node) => node.remove());
+        if (labelText) label.textContent = labelText;
+        intervalLabel.textContent = interval ? interval.textContent.trim() : "";
         button.dataset.ease = String(ease);
-        button.dataset.pfInterval = interval ? interval.textContent.trim() : "";
         button.classList.add(
           "pf-native-control",
           "pf-native-answer",
