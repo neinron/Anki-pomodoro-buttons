@@ -58,6 +58,10 @@ class PomodoroController:
         self.timer.setInterval(500)
         self.timer.timeout.connect(self.on_tick)
         self.last_persist_mono = 0.0
+        self.study_layout_revision = 0
+        self.study_request_revision = 0
+        self.study_layout: dict[str, Any] | None = None
+        self.study_counts: dict[str, Any] = {}
         application = QApplication.instance()
         if application is not None:
             application.applicationStateChanged.connect(
@@ -84,6 +88,10 @@ class PomodoroController:
             now_wall=datetime.now().astimezone(),
         )
         self.last_persist_mono = time.monotonic()
+        self.study_layout_revision = 0
+        self.study_request_revision = 0
+        self.study_layout = None
+        self.study_counts = {}
         self.timer.start()
 
     def on_profile_close(self) -> None:
@@ -93,6 +101,8 @@ class PomodoroController:
             self.persist()
         self.timer.stop()
         self.engine = None
+        self.study_layout = None
+        self.study_counts = {}
 
     def persist(self) -> None:
         if self.engine is None or mw.pm.name is None:
@@ -212,6 +222,7 @@ class PomodoroController:
             return
         self.engine.register_activity(time.monotonic())
         self.broadcast()
+        QTimer.singleShot(0, self.request_study_layout)
 
     def on_reviewer_answer(self, _reviewer: Any, _card: Any, _ease: int) -> None:
         if self.engine is None:
@@ -253,6 +264,8 @@ class PomodoroController:
                     "window.PomodoroFocus.setAnswerBarMode(true);"
                 )
             self.broadcast()
+            self.push_cached_study_layout()
+            QTimer.singleShot(0, self.request_study_layout)
             return (True, None)
         if action == "ready_bottom":
             self.set_native_bottom_visible(False)
@@ -264,20 +277,37 @@ class PomodoroController:
                     "window.PomodoroFocus.setAnswerBarMode(true);"
                 )
             self.broadcast()
+            QTimer.singleShot(0, self.request_study_layout)
             return (True, None)
         if action == "study_actions":
             layout = payload.get("layout")
             if isinstance(layout, dict):
                 reviewer = getattr(mw, "reviewer", None)
-                web = getattr(reviewer, "web", None)
-                if web is not None:
-                    data = json.dumps(
-                        layout, ensure_ascii=False, separators=(",", ":")
-                    )
-                    web.eval(
-                        "window.PomodoroFocus && "
-                        "window.PomodoroFocus.setStudyActions(" + data + ");"
-                    )
+                current_side = getattr(reviewer, "state", None)
+                card = getattr(reviewer, "card", None)
+                card_id = getattr(card, "id", None)
+                side = layout.get("side")
+                request = layout.pop("request", None)
+                if (
+                    side != current_side
+                    or card_id is None
+                    or not isinstance(request, dict)
+                    or request.get("request_id") != self.study_request_revision
+                    or request.get("side") != current_side
+                    or request.get("card_id") != str(card_id)
+                ):
+                    return (True, None)
+                validated = dict(layout)
+                counts = validated.get("counts")
+                if side == "question" and isinstance(counts, dict):
+                    self.study_counts = dict(counts)
+                elif side == "answer" and self.study_counts:
+                    validated["counts"] = dict(self.study_counts)
+                self.study_layout_revision += 1
+                validated["revision"] = self.study_layout_revision
+                validated["card_id"] = str(card_id)
+                self.study_layout = validated
+                self.push_study_layout(validated)
             return (True, None)
         if action == "open_panel":
             self.open_panel()
@@ -374,12 +404,52 @@ class PomodoroController:
         web.eval(
             "window.PomodoroFocus && window.PomodoroFocus.receive(" + data + ");"
         )
+
+    def push_study_layout(self, layout: dict[str, Any]) -> None:
+        reviewer = getattr(mw, "reviewer", None)
+        web = getattr(reviewer, "web", None)
+        if web is None:
+            return
+        data = json.dumps(layout, ensure_ascii=False, separators=(",", ":"))
+        web.eval(
+            "window.PomodoroFocus && "
+            "window.PomodoroFocus.setStudyActions(" + data + ");"
+        )
+
+    def push_cached_study_layout(self) -> None:
+        layout = self.study_layout
+        reviewer = getattr(mw, "reviewer", None)
+        card = getattr(reviewer, "card", None)
+        if (
+            layout is None
+            or layout.get("side") != getattr(reviewer, "state", None)
+            or layout.get("card_id") != str(getattr(card, "id", ""))
+        ):
+            return
+        self.push_study_layout(layout)
+
+    def request_study_layout(self) -> None:
+        if mw.state != "review":
+            return
+        reviewer = getattr(mw, "reviewer", None)
         bottom = getattr(reviewer, "bottom", None)
         bottom_web = getattr(bottom, "web", None)
-        if bottom_web is not None:
+        card = getattr(reviewer, "card", None)
+        side = getattr(reviewer, "state", None)
+        card_id = getattr(card, "id", None)
+        if bottom_web is not None and side in {"question", "answer"} and card_id is not None:
+            self.study_request_revision += 1
+            request = json.dumps(
+                {
+                    "request_id": self.study_request_revision,
+                    "side": side,
+                    "card_id": str(card_id),
+                },
+                separators=(",", ":"),
+            )
             bottom_web.eval(
                 "window.PomodoroFocusBottom && "
-                "window.PomodoroFocusBottom.receive(" + data + ");"
+                "window.PomodoroFocusBottom.requestLayout(" + request + ");"
             )
 
     def open_panel(self) -> None:

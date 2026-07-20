@@ -7,6 +7,8 @@
   let lastStudyActions = "";
   let lastCardCounts = { new: "", learn: "", review: "", active: "" };
   let scheduled = false;
+  let forcePending = false;
+  let requestContext = null;
 
   function send(action, data = {}) {
     if (typeof pycmd === "function") {
@@ -30,9 +32,8 @@
   }
 
   function readStudyActions(force = false) {
-    scheduled = false;
     const middle = document.getElementById("middle");
-    if (!middle) return;
+    if (!middle || !requestContext) return;
 
     const outerButtons = [...document.querySelectorAll("#innertable > tbody > tr > td.stat > button")];
     const base = {
@@ -74,16 +75,24 @@
       };
     }
 
+    layout.request = { ...requestContext };
+
     const serialized = JSON.stringify(layout);
     if (!force && serialized === lastStudyActions) return;
     lastStudyActions = serialized;
     send("study_actions", { layout });
   }
 
-  function scheduleRead() {
+  function scheduleRead(force = false) {
+    forcePending = forcePending || force;
     if (scheduled) return;
     scheduled = true;
-    requestAnimationFrame(readStudyActions);
+    requestAnimationFrame(() => {
+      const shouldForce = forcePending;
+      forcePending = false;
+      scheduled = false;
+      readStudyActions(shouldForce);
+    });
   }
 
   function start() {
@@ -97,15 +106,14 @@
       subtree: true,
       characterData: true,
     });
-    scheduleRead();
-    window.setInterval(() => readStudyActions(true), 1000);
     send("ready_bottom");
   }
 
   window.PomodoroFocusBottom = {
-    receive() {
-      lastStudyActions = "";
-      scheduleRead();
+    requestLayout(context) {
+      if (!context || !["question", "answer"].includes(context.side)) return;
+      requestContext = { ...context };
+      scheduleRead(true);
     },
     signalFocusComplete() {},
   };

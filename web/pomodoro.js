@@ -67,6 +67,7 @@
   let completionSignalTimer = null;
   let lastActivitySent = 0;
   let studyActions = null;
+  let latestStudyLayoutRevision = 0;
   let liquidGlassFrame = null;
   const liquidFilterCache = new Map();
   const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
@@ -604,6 +605,11 @@
 
   function setStudyActions(layout) {
     if (!layout || !["question", "answer"].includes(layout.side)) return;
+    const revision = Number(layout.revision);
+    if (Number.isFinite(revision)) {
+      if (revision <= latestStudyLayoutRevision) return;
+      latestStudyLayoutRevision = revision;
+    }
     const priorCounts = studyActions?.counts;
     studyActions = layout;
     const editLabel = layout.edit_label || "Edit";
@@ -902,10 +908,5 @@
     setStudyActions,
   };
 
-  setStudyActions({
-    side: "question",
-    show_label: "Show Answer",
-    counts: { new: "0", learn: "0", review: "0", active: "" },
-  });
   send("ready");
 })();
