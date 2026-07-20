@@ -45,6 +45,8 @@
   --pf-blue: #0a84ff;
   --pf-ring: var(--pf-focus);
   --pf-review-height: 44px;
+  --pf-review-control-radius: calc(var(--pf-review-height) / 2);
+  --pf-review-square-radius: clamp(13px, calc(var(--pf-review-height) * .36), 23px);
   --pf-liquid-highlight: rgba(255, 255, 255, .7);
   --pf-liquid-highlight-soft: rgba(255, 255, 255, .16);
   --pf-liquid-shadow: rgba(12, 16, 24, .12);
@@ -105,6 +107,7 @@ html.nightMode .pf-shell,
   margin: 0;
   border: 0.5px solid #e3e3e3;
   border-radius: var(--pf-card-radius);
+  corner-shape: squircle;
   background: #fff;
   box-shadow: 0 1px 3px rgba(18, 20, 24, 0.08);
   backdrop-filter: blur(24px) saturate(160%);
@@ -188,7 +191,7 @@ html.nightMode .pf-shell,
   height: var(--pf-review-height);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   pointer-events: auto;
 }
 
@@ -213,7 +216,8 @@ html.nightMode .pf-shell,
   height: var(--pf-review-height);
   margin: 0;
   border: 0.5px solid color-mix(in srgb, var(--pf-text) 12%, transparent);
-  border-radius: clamp(11px, calc(var(--pf-review-height) * .27), 17px);
+  border-radius: var(--pf-review-control-radius);
+  corner-shape: squircle;
   background-color: color-mix(in srgb, var(--pf-glass-strong) 72%, transparent);
   background-image: linear-gradient(
     145deg,
@@ -246,7 +250,10 @@ html.nightMode .pf-shell,
   font-size: 13px;
   font-weight: 650;
   line-height: 1;
-  transition: transform 120ms ease, background 140ms ease, border-color 140ms ease;
+  transition:
+    transform 260ms cubic-bezier(.34, 1.56, .64, 1),
+    background-color 140ms ease,
+    border-color 140ms ease;
 }
 
 .pf-review-control:hover {
@@ -254,7 +261,9 @@ html.nightMode .pf-shell,
 }
 
 .pf-review-control:active {
-  transform: scale(.975);
+  transform: scale(.96);
+  transition-duration: 80ms, 140ms, 140ms;
+  transition-timing-function: ease-out, ease, ease;
 }
 
 .pf-review-utility {
@@ -289,7 +298,8 @@ html.nightMode .pf-shell,
   display: grid;
   place-items: center;
   border: 1px solid color-mix(in srgb, var(--pf-text) 12%, transparent);
-  border-radius: clamp(11px, calc(var(--pf-review-height) * .27), 17px);
+  border-radius: var(--pf-review-square-radius);
+  corner-shape: squircle;
   background-color: color-mix(in srgb, var(--pf-glass-strong) 72%, transparent);
   background-image: linear-gradient(
     145deg,
@@ -488,6 +498,14 @@ html.nightMode .pf-shell,
   .pf-review-timer { flex-basis: 82px; width: 82px; min-width: 82px; }
 }
 
+@media (max-width: 900px) {
+  .pf-review-bar { right: 8px; left: 8px; }
+  .pf-review-edge, .pf-review-actions { gap: 4px; }
+  .pf-review-utility { min-width: 48px; padding-right: 6px; padding-left: 6px; font-size: 12px; }
+  .pf-review-answer { width: 76px; min-width: 76px; padding-right: 6px; padding-left: 6px; font-size: 12px; }
+  .pf-review-timer { flex-basis: 76px; width: 76px; min-width: 76px; padding-right: 9px; padding-left: 9px; }
+}
+
 .pf-answer-bar-settings {
   display: none;
 }
@@ -652,7 +670,8 @@ html.nightMode .pf-card,
   width: min(372px, calc(100vw - 24px));
   max-height: min(720px, calc(100vh - 24px));
   border: 1px solid var(--pf-border);
-  border-radius: 30px;
+  border-radius: 32px;
+  corner-shape: squircle;
   background:
     radial-gradient(circle at 8% 0%, rgba(255,255,255,.48), transparent 29%),
     var(--pf-glass-strong);
@@ -760,7 +779,10 @@ html.nightMode .pf-card,
   align-items: center;
   justify-content: center;
   gap: 7px;
-  transition: transform 120ms ease, background 160ms ease, opacity 160ms ease;
+  transition:
+    transform 260ms cubic-bezier(.34, 1.56, .64, 1),
+    background 160ms ease,
+    opacity 160ms ease;
 }
 
 .pf-button:hover {
@@ -768,7 +790,9 @@ html.nightMode .pf-card,
 }
 
 .pf-button:active {
-  transform: scale(.965);
+  transform: scale(.95);
+  transition-duration: 80ms, 160ms, 160ms;
+  transition-timing-function: ease-out, ease, ease;
 }
 
 .pf-button:disabled {
@@ -789,7 +813,8 @@ html.nightMode .pf-card,
   max-width: none;
   justify-self: center;
   padding: 0 16px;
-  border-radius: 14px;
+  border-radius: 999px;
+  corner-shape: squircle;
   background: var(--pf-ring);
   color: white;
   box-shadow: none !important;
@@ -802,7 +827,8 @@ html.nightMode .pf-card,
 .pf-confirm-actions .pf-button {
   width: 100%;
   max-width: none;
-  border-radius: 14px;
+  border-radius: 999px;
+  corner-shape: squircle;
 }
 
 .pf-icon {
@@ -819,7 +845,8 @@ html.nightMode .pf-card,
   display: none;
   margin-top: 14px;
   padding: 12px 14px;
-  border-radius: 16px;
+  border-radius: 18px;
+  corner-shape: squircle;
   background: color-mix(in srgb, var(--pf-ring) 13%, transparent);
   color: var(--pf-text);
   font-size: 12px;
@@ -881,7 +908,8 @@ html.nightMode .pf-card,
 
 .pf-settings {
   position: relative;
-  border-radius: 20px;
+  border-radius: 22px;
+  corner-shape: squircle;
   background: color-mix(in srgb, var(--pf-control) 74%, transparent);
   border: 0;
   box-shadow: none !important;
@@ -914,14 +942,16 @@ html.nightMode .pf-card,
 .pf-setting-row:last-child,
 .pf-row-button:last-child {
   border-bottom: 0;
-  border-bottom-right-radius: 20px;
-  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 22px;
+  border-bottom-left-radius: 22px;
+  corner-shape: squircle;
 }
 
 .pf-setting-row:first-child,
 .pf-row-button:first-child {
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
+  border-top-left-radius: 22px;
+  border-top-right-radius: 22px;
+  corner-shape: squircle;
 }
 
 .pf-setting-icon {
@@ -953,7 +983,8 @@ html.nightMode .pf-card,
   max-width: 132px;
   padding: 0 9px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 16px;
+  corner-shape: squircle;
   background: color-mix(in srgb, var(--pf-control) 86%, transparent);
   color: var(--pf-text);
   font: inherit;
@@ -998,7 +1029,8 @@ input[type="number"].pf-setting-control {
   align-items: center;
   padding: 0 9px 0 11px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 17px;
+  corner-shape: squircle;
   background: color-mix(in srgb, var(--pf-control) 88%, transparent);
   text-align: left;
   box-shadow: none;
@@ -1055,7 +1087,8 @@ input[type="number"].pf-setting-control {
   overflow-y: auto;
   overscroll-behavior: contain;
   border: 1px solid var(--pf-border);
-  border-radius: 14px;
+  border-radius: 18px;
+  corner-shape: squircle;
   background: var(--pf-glass-strong);
   box-shadow: 0 16px 42px rgba(13, 15, 20, .2), 0 2px 8px rgba(13, 15, 20, .08);
   backdrop-filter: blur(24px) saturate(160%);
