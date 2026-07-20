@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pomodoro Focus UI Harness</title>
-  <link rel="stylesheet" href="../web/pomodoro.css?v=32">
+  <link rel="stylesheet" href="../web/pomodoro.css?v=33">
   <style>
     body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f2f3f5; color: #17181a; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
     main { width: min(720px, 78vw); text-align: center; }
@@ -41,7 +41,7 @@
       remaining_seconds: 1382, duration_seconds: 1500, progress: 0.921,
       elapsed_seconds: 118, round_index: 2, round_total: 4, answer_count: 12,
       completion: null,
-      config: { preset: "classic", focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_after: 4, idle_autopause_enabled: true, idle_minutes: 2, focus_hide: true, completion_sound: true, daily_goal: 4, answer_button_height: 44 },
+      config: { preset: "classic", focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_after: 4, idle_autopause_enabled: true, idle_minutes: 2, focus_hide: true, completion_sound: true, daily_goal: 4, answer_button_height: 44, answer_timer_style: "time" },
       position: { x: .94, y: .06 },
       daily: {
         today: { completed: 2, incomplete: 0, answers: 84, goal: 4, goal_met: false },
@@ -69,6 +69,9 @@
     const requestedButtonHeight = Number(params.get("buttonHeight"));
     if (Number.isFinite(requestedButtonHeight) && requestedButtonHeight >= 36 && requestedButtonHeight <= 64) {
       mock.config.answer_button_height = requestedButtonHeight;
+    }
+    if (["time", "circle"].includes(params.get("answerTimer"))) {
+      mock.config.answer_timer_style = params.get("answerTimer");
     }
     if (params.get("hide") === "0") {
       mock.config.focus_hide = false;
@@ -160,8 +163,8 @@
       }, 0);
     };
   </script>
-  <script src="../web/pomodoro.js?v=32"></script>
-  <script src="../web/pomodoro_bottom.js?v=14"></script>
+  <script src="../web/pomodoro.js?v=33"></script>
+  <script src="../web/pomodoro_bottom.js?v=15"></script>
   <script>
     if (params.get("signal") === "focus-complete") {
       setTimeout(() => window.PomodoroFocus?.signalFocusComplete(), 180);

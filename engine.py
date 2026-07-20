@@ -35,6 +35,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "completion_sound": True,
     "daily_goal": 4,
     "answer_button_height": 44,
+    "answer_timer_style": "time",
 }
 
 PHASE_DURATION_KEY = {
@@ -57,6 +58,11 @@ def normalize_config(raw: dict[str, Any] | None) -> dict[str, Any]:
     preset = str(source.get("preset", "classic"))
     if preset not in {*PRESETS, "custom"}:
         preset = "custom"
+    answer_timer_style = str(source.get("answer_timer_style", "time"))
+    if answer_timer_style == "line":
+        answer_timer_style = "time"
+    if answer_timer_style not in {"time", "circle"}:
+        answer_timer_style = "time"
     return {
         "preset": preset,
         "focus_minutes": _clamp(source.get("focus_minutes"), 1, 120, 25),
@@ -77,6 +83,7 @@ def normalize_config(raw: dict[str, Any] | None) -> dict[str, Any]:
         "answer_button_height": _clamp(
             source.get("answer_button_height"), 36, 64, 44
         ),
+        "answer_timer_style": answer_timer_style,
     }
 
 

@@ -344,6 +344,7 @@ class PomodoroController:
                     "completion_sound",
                     "daily_goal",
                     "answer_button_height",
+                    "answer_timer_style",
                 }
                 clean_patch = {key: value for key, value in patch.items() if key in allowed}
                 event = self.engine.apply_settings(

@@ -217,6 +217,14 @@ class TimerEngineTests(unittest.TestCase):
         self.assertEqual(engine.config["answer_button_height"], 64)
         self.assertAlmostEqual(engine.remaining_seconds, 45)
 
+    def test_answer_timer_style_supports_time_and_circle(self):
+        engine = TimerEngine(short_config(answer_timer_style="line"), now_wall=NOW)
+        self.assertEqual(engine.config["answer_timer_style"], "time")
+        engine.apply_settings({"answer_timer_style": "circle"}, 0, NOW)
+        self.assertEqual(engine.config["answer_timer_style"], "circle")
+        engine.apply_settings({"answer_timer_style": "invalid"}, 0, NOW)
+        self.assertEqual(engine.config["answer_timer_style"], "time")
+
     def test_rating_resumes_away_pause_and_is_counted(self):
         engine = TimerEngine(short_config(focus_minutes=5), now_wall=NOW)
         engine.start(0, NOW)

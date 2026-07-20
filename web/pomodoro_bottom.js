@@ -21,7 +21,15 @@
     return copy.textContent.replace(/\s+/g, " ").trim();
   }
 
-  function readStudyActions() {
+  function answerEase(button) {
+    const direct = Number(button.dataset.ease);
+    if (direct >= 1 && direct <= 4) return direct;
+    const source = `${button.id || ""} ${button.getAttribute("onclick") || ""}`;
+    const match = source.match(/ease[^1-4]*([1-4])/i);
+    return match ? Number(match[1]) : 0;
+  }
+
+  function readStudyActions(force = false) {
     scheduled = false;
     const middle = document.getElementById("middle");
     if (!middle) return;
@@ -51,12 +59,15 @@
         counts: lastCardCounts,
       };
     } else {
+      const answerButtons = [...middle.querySelectorAll("button")]
+        .filter((button) => answerEase(button));
+      if (!answerButtons.length) return;
       layout = {
         ...base,
         side: "answer",
         counts: lastCardCounts,
-        buttons: [...middle.querySelectorAll("button[data-ease]")].map((button) => ({
-          ease: Number(button.dataset.ease),
+        buttons: answerButtons.map((button) => ({
+          ease: answerEase(button),
           label: buttonLabel(button),
           due: button.querySelector(".nobold")?.textContent.trim() || "",
         })),
@@ -64,7 +75,7 @@
     }
 
     const serialized = JSON.stringify(layout);
-    if (serialized === lastStudyActions) return;
+    if (!force && serialized === lastStudyActions) return;
     lastStudyActions = serialized;
     send("study_actions", { layout });
   }
@@ -81,17 +92,19 @@
       requestAnimationFrame(start);
       return;
     }
-    new MutationObserver(scheduleRead).observe(document.body, {
+    new MutationObserver(scheduleRead).observe(document.documentElement, {
       childList: true,
       subtree: true,
       characterData: true,
     });
     scheduleRead();
+    window.setInterval(() => readStudyActions(true), 1000);
     send("ready_bottom");
   }
 
   window.PomodoroFocusBottom = {
     receive() {
+      lastStudyActions = "";
       scheduleRead();
     },
     signalFocusComplete() {},

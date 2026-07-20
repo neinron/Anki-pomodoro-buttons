@@ -9,5 +9,6 @@
   "focus_hide": true,
   "completion_sound": true,
   "daily_goal": 4,
-  "answer_button_height": 44
+  "answer_button_height": 44,
+  "answer_timer_style": "time"
 }

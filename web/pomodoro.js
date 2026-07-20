@@ -57,6 +57,10 @@
       label: `${index + 1} min`,
     })),
   ];
+  const answerTimerStyleOptions = [
+    { value: "time", label: "Time · MM:SS" },
+    { value: "circle", label: "Circle" },
+  ];
   let snapshot = null;
   let panelOpen = false;
   let historyOpen = false;
@@ -208,6 +212,11 @@
           </div>
 
           <div class="pf-settings pf-answer-bar-settings">
+            <div class="pf-setting-row">
+              <span class="pf-setting-icon">${icon("circle")}</span>
+              <span class="pf-setting-label">Timer</span>
+              ${customSelect("pf-answer-timer-style", "Answer bar timer", "time", answerTimerStyleOptions)}
+            </div>
             <div class="pf-setting-row">
               <span class="pf-setting-icon">${icon("maximize")}</span>
               <span class="pf-setting-label">Button height</span>
@@ -541,14 +550,18 @@
     const height = Math.max(36, Math.min(64, Number(data.config.answer_button_height) || 44));
     $(".pf-shell").style.setProperty("--pf-review-height", `${height}px`);
     const timer = $("#pf-review-timer");
+    const indicator = data.config.answer_timer_style === "circle" ? "circle" : "time";
     const duration = Math.max(1, Number(data.duration_seconds) || 1);
     const remaining = Math.max(0, Number(data.remaining_seconds) || 0);
     const remainingProgress = Math.max(0, Math.min(1, remaining / duration));
     const visualProgress = data.phase === "focus" ? 1 - remainingProgress : remainingProgress;
+    timer.dataset.indicator = indicator;
     timer.dataset.state = data.state === "running" ? "running" : "inactive";
     timer.dataset.phase = data.phase;
     timer.title = `${phaseLabel(data.phase)} · ${mmss(remaining)}`;
-    timer.querySelector(".pf-review-time").textContent = String(Math.ceil(remaining / 60));
+    timer.querySelector(".pf-review-time").textContent = indicator === "circle"
+      ? String(Math.ceil(remaining / 60))
+      : mmss(remaining);
     timer.querySelector(".pf-review-ring-fill").style.strokeDasharray = `${visualProgress * 87.5} 100`;
     scheduleReviewActionsPosition();
     scheduleLiquidGlass();
@@ -670,6 +683,10 @@
     setControlValue($("#pf-long-after"), data.config.long_break_after);
     setControlValue($("#pf-idle-minutes"), data.config.idle_autopause_enabled ? data.config.idle_minutes : 0);
     setControlValue($("#pf-daily-goal"), data.config.daily_goal);
+    setControlValue(
+      $("#pf-answer-timer-style"),
+      data.config.answer_timer_style === "circle" ? "circle" : "time"
+    );
     setControlValue($("#pf-answer-button-height"), data.config.answer_button_height);
     $("#pf-answer-button-height-value").textContent = `${data.config.answer_button_height} px`;
     $("#pf-focus-hide").setAttribute("aria-checked", String(Boolean(data.config.focus_hide)));
@@ -806,6 +823,9 @@
   $("#pf-long-minutes").addEventListener("change", (event) => sendSettings({ long_break_minutes: Number(event.target.value) }));
   $("#pf-long-after").addEventListener("change", (event) => sendSettings({ long_break_after: Number(event.target.value) }));
   $("#pf-daily-goal").addEventListener("change", (event) => sendSettings({ daily_goal: Number(event.target.value) }));
+  $("#pf-answer-timer-style").addEventListener("pf-change", (event) => {
+    sendSettings({ answer_timer_style: event.detail.value });
+  });
   $("#pf-answer-button-height").addEventListener("input", (event) => {
     const height = Number(event.target.value);
     $("#pf-answer-button-height-value").textContent = `${height} px`;
@@ -882,5 +902,10 @@
     setStudyActions,
   };
 
+  setStudyActions({
+    side: "question",
+    show_label: "Show Answer",
+    counts: { new: "0", learn: "0", review: "0", active: "" },
+  });
   send("ready");
 })();
