@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pomodoro Focus UI Harness</title>
+  <link rel="stylesheet" href="../web/pomodoro.css?v=21">
+  <link rel="stylesheet" href="../web/pomodoro_bottom.css?v=12">
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f2f3f5; color: #17181a; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    main { width: min(720px, 78vw); text-align: center; }
+    .deck { color: #777; font-size: 13px; margin-bottom: 36px; }
+    h1 { font-size: 34px; letter-spacing: -.03em; font-weight: 620; }
+    p { color: #65676c; line-height: 1.6; }
+    #mock-bottom { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="deck">Cognitive Systems · Reinforcement Learning</div>
+    <h1>What is the role of the value function in reinforcement learning?</h1>
+    <p>Think about how expected future reward guides an agent’s decisions.</p>
+  </main>
+  <div id="mock-bottom">
+    <center id="outer"><table id="innertable" width="100%" cellspacing="0" cellpadding="0"><tr>
+      <td align="start" valign="top" class="stat"><button onclick="pycmd('edit')">Bearbeiten</button></td>
+      <td align="center" valign="top" id="middle">
+        <center><table cellpadding="0" cellspacing="0"><tr>
+          <td align="center"><button data-ease="1" onclick="pycmd('ease1')">Again<span class="nobold">1m</span></button></td>
+          <td align="center"><button data-ease="2" onclick="pycmd('ease2')">Hard<span class="nobold">6m</span></button></td>
+          <td align="center"><button data-ease="3" onclick="pycmd('ease3')">Good<span class="nobold">10m</span></button></td>
+          <td align="center"><button data-ease="4" onclick="pycmd('ease4')">Easy<span class="nobold">4d</span></button></td>
+        </tr></table></center>
+      </td>
+      <td align="end" valign="top" class="stat"><button onclick="pycmd('more')">More</button></td>
+    </tr></table></center>
+  </div>
+  <div id="pomodoro-focus-root"></div>
+  <script>
+    const mock = {
+      state: "running", phase: "focus", pause_reason: null,
+      remaining_seconds: 1382, duration_seconds: 1500, progress: 0.921,
+      elapsed_seconds: 118, round_index: 2, round_total: 4, answer_count: 12,
+      completion: null,
+      config: { preset: "classic", focus_minutes: 25, short_break_minutes: 5, long_break_minutes: 15, long_break_after: 4, idle_autopause_enabled: true, idle_minutes: 2, focus_hide: true, completion_sound: true, daily_goal: 4, card_size: 96, progress_style: "line", answer_button_height: 44, answer_timer_style: "line" },
+      position: { x: .94, y: .06 },
+      daily: {
+        today: { completed: 2, incomplete: 0, answers: 84, goal: 4, goal_met: false },
+        streak: 6,
+        days: [
+          ["2026-07-08",2,61], ["2026-07-09",4,121], ["2026-07-10",3,97],
+          ["2026-07-11",1,34], ["2026-07-12",4,132], ["2026-07-13",3,104], ["2026-07-14",2,84]
+        ].map(([date, completed, answers]) => ({ date, completed, incomplete: 0, answers, goal: 4, goal_met: completed >= 4, streak_met: completed > 0 }))
+      }
+    };
+    const params = new URLSearchParams(location.search);
+    const answerActionsHtml = `<center><table cellpadding="0" cellspacing="0"><tr>
+      <td align="center"><button data-ease="1" onclick="pycmd('ease1')">Again<span class="nobold">1m</span></button></td>
+      <td align="center"><button data-ease="2" onclick="pycmd('ease2')">Hard<span class="nobold">6m</span></button></td>
+      <td align="center"><button data-ease="3" onclick="pycmd('ease3')">Good<span class="nobold">10m</span></button></td>
+      <td align="center"><button data-ease="4" onclick="pycmd('ease4')">Easy<span class="nobold">4d</span></button></td>
+    </tr></table></center>`;
+    const questionActionsHtml = `<table cellpadding="0"><tr><td class="stat2" align="center">
+      <button id="ansbut" onclick="pycmd('ans')">Show Answer<span class="stattxt"><span class="new-count">12</span> + <span class="learn-count"><u>34</u></span> + <span class="review-count">56</span></span></button>
+    </td></tr></table>`;
+    const showNativeActions = (html) => {
+      document.getElementById("middle").innerHTML = html;
+    };
+    if (params.get("side") === "question") showNativeActions(questionActionsHtml);
+    const requestedSize = Number(params.get("size"));
+    if (Number.isFinite(requestedSize) && requestedSize >= 50 && requestedSize <= 144) {
+      mock.config.card_size = requestedSize;
+    }
+    if (params.get("style") === "circle" || params.get("style") === "line") {
+      mock.config.progress_style = params.get("style");
+    }
+    if (["line", "circle", "hidden"].includes(params.get("answerTimer"))) {
+      mock.config.answer_timer_style = params.get("answerTimer");
+    }
+    const requestedButtonHeight = Number(params.get("buttonHeight"));
+    if (Number.isFinite(requestedButtonHeight) && requestedButtonHeight >= 36 && requestedButtonHeight <= 64) {
+      mock.config.answer_button_height = requestedButtonHeight;
+    }
+    if (params.get("hide") === "0") {
+      mock.config.focus_hide = false;
+    }
+    if (params.get("position") === "top-left") {
+      mock.position = { x: 0, y: 0 };
+    }
+    const requestedPreviewScale = Number(params.get("previewScale"));
+    if (Number.isFinite(requestedPreviewScale) && requestedPreviewScale > 0 && requestedPreviewScale <= 1) {
+      document.getElementById("pomodoro-focus-root").style.zoom = String(requestedPreviewScale);
+    }
+    const requestedMinutes = Number(params.get("minutes"));
+    if (Number.isFinite(requestedMinutes) && requestedMinutes >= 1 && requestedMinutes <= 120) {
+      mock.config.focus_minutes = requestedMinutes;
+      mock.duration_seconds = requestedMinutes * 60;
+      mock.remaining_seconds = requestedMinutes * 60;
+      mock.progress = 1;
+      mock.elapsed_seconds = 0;
+    }
+    if (params.get("phase") === "short_break" || params.get("phase") === "long_break") {
+      mock.phase = params.get("phase");
+      const breakMinutes = mock.phase === "long_break" ? mock.config.long_break_minutes : mock.config.short_break_minutes;
+      mock.duration_seconds = breakMinutes * 60;
+      mock.remaining_seconds = mock.duration_seconds;
+      mock.progress = 1;
+      mock.elapsed_seconds = 0;
+      mock.answer_count = 0;
+    }
+    const requestedElapsed = Number(params.get("elapsed"));
+    if (Number.isFinite(requestedElapsed) && requestedElapsed >= 0 && requestedElapsed <= 1) {
+      mock.progress = 1 - requestedElapsed;
+      mock.remaining_seconds = mock.duration_seconds * mock.progress;
+      mock.elapsed_seconds = mock.duration_seconds * requestedElapsed;
+    }
+    if (params.get("theme") === "dark") {
+      document.body.classList.add("nightMode");
+      document.body.style.background = "#15171a";
+      document.body.style.color = "#f4f5f7";
+    }
+    if (params.get("state") === "completed") {
+      mock.state = "completed";
+      mock.remaining_seconds = 0;
+      mock.progress = 0;
+      mock.completion = mock.phase === "focus"
+        ? { kind: "focus", answers: 31, next_phase: "short_break" }
+        : { kind: "break", answers: 0, next_phase: "focus" };
+    }
+    if (params.get("state") === "paused") {
+      mock.state = "paused";
+      mock.pause_reason = "idle";
+    }
+    if (params.get("state") === "idle") {
+      mock.state = "idle";
+      mock.pause_reason = null;
+      mock.remaining_seconds = mock.duration_seconds;
+      mock.progress = 1;
+      mock.elapsed_seconds = 0;
+      mock.answer_count = 0;
+    }
+    window.pycmd = (message) => {
+      if (!message.startsWith("pomodoro_focus:")) {
+        if (message === "ans") {
+          showNativeActions(answerActionsHtml);
+          return;
+        }
+        if (message.startsWith("ease")) {
+          mock.answer_count += 1;
+          setTimeout(() => {
+            window.PomodoroFocus?.receive(mock);
+            window.PomodoroFocusBottom?.receive(mock);
+          }, 0);
+        }
+        return;
+      }
+      const payload = JSON.parse(message.slice("pomodoro_focus:".length));
+      if (payload.action === "pause") { mock.state = "paused"; mock.pause_reason = "manual"; }
+      if (payload.action === "resume" || payload.action === "start") { mock.state = "running"; mock.pause_reason = null; }
+      if (payload.action === "reset") { mock.state = "idle"; mock.remaining_seconds = mock.duration_seconds; mock.elapsed_seconds = 0; mock.answer_count = 0; }
+      if (payload.action === "update_settings") Object.assign(mock.config, payload.settings);
+      if (payload.action === "study_actions") window.PomodoroFocus?.setStudyActions(payload.layout);
+      if (payload.action === "show_answer") showNativeActions(answerActionsHtml);
+      if (payload.action === "move") mock.position = { x: payload.x, y: payload.y };
+      if (payload.action === "reset_position") mock.position = { x: .94, y: .06 };
+      if (payload.action === "open_panel") window.PomodoroFocus?.openPanel();
+      if (payload.action === "ready_bottom" && params.get("ignoreReady") !== "1") {
+        window.PomodoroFocus?.setAnswerBarMode(true);
+      }
+      setTimeout(() => {
+        window.PomodoroFocus?.receive(mock);
+        window.PomodoroFocusBottom?.receive(mock);
+      }, 0);
+    };
+  </script>
+  <script src="../web/pomodoro.js?v=21"></script>
+  <script src="../web/pomodoro_bottom.js?v=12"></script>
+  <script>
+    if (params.get("signal") === "focus-complete") {
+      setTimeout(() => window.PomodoroFocus?.signalFocusComplete(), 180);
+    }
+  </script>
+</body>
+</html>

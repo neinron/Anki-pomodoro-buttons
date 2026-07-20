@@ -1,0 +1,10 @@
+{
+  "name": "Pomodoro Focus",
+  "package": "pomodoro_focus",
+  "author": "Jaron Schurer",
+  "version": "1.1.0",
+  "homepage": "https://github.com/neinron/Anki-pomodoro-buttons",
+  "conflicts": [],
+  "min_point_version": 250700,
+  "max_point_version": 250999
+}
