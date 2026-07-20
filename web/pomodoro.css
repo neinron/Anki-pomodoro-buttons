@@ -45,7 +45,7 @@
   --pf-blue: #0a84ff;
   --pf-ring: var(--pf-focus);
   --pf-review-height: 44px;
-  --pf-review-control-radius: calc(var(--pf-review-height) / 2);
+  --pf-review-control-radius: 999px;
   --pf-review-square-radius: clamp(13px, calc(var(--pf-review-height) * .36), 23px);
   --pf-review-label-size: clamp(13px, calc(9.4px + var(--pf-review-height) * .1), 16px);
   --pf-review-number-size: clamp(13px, calc(7.2px + var(--pf-review-height) * .16), 18px);
@@ -220,7 +220,7 @@ html.nightMode .pf-shell,
   height: var(--pf-review-height);
   margin: 0;
   border: 0.5px solid color-mix(in srgb, var(--pf-text) 12%, transparent);
-  border-radius: var(--pf-review-control-radius);
+  border-radius: 999px !important;
   corner-shape: squircle;
   background-color: color-mix(in srgb, var(--pf-glass-strong) 72%, transparent);
   background-image: linear-gradient(
@@ -323,7 +323,7 @@ html.nightMode .pf-shell,
   align-items: center;
   justify-content: center;
   gap: 2px;
-  border-radius: var(--pf-review-control-radius);
+  border-radius: 999px !important;
   corner-shape: round;
   transition: border-color 160ms ease, box-shadow 160ms ease;
   cursor: default;
@@ -430,7 +430,7 @@ html.nightMode .pf-shell,
   max-width: 110px;
   padding: 0 14px;
   overflow: hidden;
-  border-radius: var(--pf-review-control-radius) !important;
+  border-radius: 999px !important;
   font-variant-numeric: tabular-nums;
 }
 
