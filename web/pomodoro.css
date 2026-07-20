@@ -441,33 +441,13 @@ html.nightMode .pf-shell,
   letter-spacing: -.35px;
 }
 
-.pf-review-progress {
-  position: absolute;
-  right: 12px;
-  bottom: 6px;
-  left: 12px;
-  height: 4px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--pf-secondary) 22%, transparent);
-}
-
-.pf-review-progress-fill {
-  display: block;
-  width: 0;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--pf-inactive);
-  transition: width 500ms linear, background 160ms ease;
-}
-
 .pf-review-ring {
   position: absolute;
   top: 50%;
   left: 50%;
   display: none;
-  width: min(calc(var(--pf-review-height) - 4px), 56px);
-  height: min(calc(var(--pf-review-height) - 4px), 56px);
+  width: min(calc(var(--pf-review-height) * .78), 50px);
+  height: min(calc(var(--pf-review-height) * .78), 50px);
   overflow: visible;
   transform: translate(-50%, -50%);
 }
@@ -494,24 +474,19 @@ html.nightMode .pf-shell,
   width: var(--pf-review-height);
   min-width: var(--pf-review-height);
   padding: 0;
-  border-radius: var(--pf-review-square-radius);
-  corner-shape: squircle;
+  border-radius: 50%;
+  corner-shape: round;
 }
 
 .pf-review-timer[data-indicator="circle"] .pf-review-time {
-  font-size: clamp(15px, calc(8px + var(--pf-review-height) * .24), 23px);
-  letter-spacing: -.5px;
+  font-size: clamp(13px, calc(7px + var(--pf-review-height) * .2), 20px);
+  letter-spacing: -.35px;
 }
 
-.pf-review-timer[data-indicator="circle"] .pf-review-progress { display: none; }
 .pf-review-timer[data-indicator="circle"] .pf-review-ring { display: block; }
-.pf-review-timer[data-indicator="hidden"] .pf-review-progress,
 .pf-review-timer[data-indicator="hidden"] .pf-review-ring { display: none; }
 
-.pf-review-timer[data-state="running"][data-phase="focus"] .pf-review-progress-fill { background: var(--pf-focus); }
 .pf-review-timer[data-state="running"][data-phase="focus"] .pf-review-ring-fill { stroke: var(--pf-focus); }
-.pf-review-timer[data-state="running"][data-phase="short_break"] .pf-review-progress-fill,
-.pf-review-timer[data-state="running"][data-phase="long_break"] .pf-review-progress-fill { background: var(--pf-break); }
 .pf-review-timer[data-state="running"][data-phase="short_break"] .pf-review-ring-fill,
 .pf-review-timer[data-state="running"][data-phase="long_break"] .pf-review-ring-fill { stroke: var(--pf-break); }
 
@@ -547,6 +522,7 @@ html.nightMode .pf-shell,
 
 .pf-shell.pf-answer-bar-mode .pf-answer-bar-settings {
   display: block;
+  margin-top: 10px;
 }
 
 body.nightMode .pf-card,
@@ -972,6 +948,14 @@ html.nightMode .pf-card,
 
 .pf-settings + .pf-settings {
   margin-top: 10px;
+}
+
+.pf-shell .pf-custom-duration-row {
+  display: none;
+}
+
+.pf-shell.pf-custom-preset .pf-custom-duration-row {
+  display: grid;
 }
 
 .pf-metrics + .pf-settings {

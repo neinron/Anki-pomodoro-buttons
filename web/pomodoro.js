@@ -93,9 +93,8 @@
     { value: "circle", label: "Circle" },
   ];
   const answerTimerStyleOptions = [
-    { value: "line", label: "Line" },
+    { value: "line", label: "Time only" },
     { value: "circle", label: "Circle" },
-    { value: "hidden", label: "Hidden" },
   ];
 
   let snapshot = null;
@@ -141,7 +140,6 @@
         <div class="pf-review-edge pf-review-left">
           <button class="pf-review-control pf-review-timer" id="pf-review-timer" type="button" aria-label="Open Pomodoro Focus">
             <span class="pf-review-time">25:00</span>
-            <span class="pf-review-progress" aria-hidden="true"><span class="pf-review-progress-fill"></span></span>
             <svg class="pf-review-ring" viewBox="0 0 40 40" aria-hidden="true">
               <circle class="pf-review-ring-track" pathLength="100" cx="20" cy="20" r="16"></circle>
               <circle class="pf-review-ring-fill" pathLength="100" cx="20" cy="20" r="16"></circle>
@@ -206,17 +204,17 @@
               <span class="pf-setting-label">Preset</span>
               ${customSelect("pf-preset", "Preset", "classic", presetOptions, "wide")}
             </div>
-            <label class="pf-setting-row">
+            <label class="pf-setting-row pf-custom-duration-row">
               <span class="pf-setting-icon">${icon("timer")}</span>
               <span class="pf-setting-label">Focus duration</span>
               <input class="pf-setting-control" id="pf-focus-minutes" type="number" min="1" max="120" inputmode="numeric" aria-label="Focus duration in minutes">
             </label>
-            <label class="pf-setting-row">
+            <label class="pf-setting-row pf-custom-duration-row">
               <span class="pf-setting-icon">${icon("coffee")}</span>
               <span class="pf-setting-label">Short break</span>
               <input class="pf-setting-control" id="pf-short-minutes" type="number" min="1" max="60" inputmode="numeric" aria-label="Short break in minutes">
             </label>
-            <label class="pf-setting-row">
+            <label class="pf-setting-row pf-custom-duration-row">
               <span class="pf-setting-icon">${icon("moon")}</span>
               <span class="pf-setting-label">Long break</span>
               <input class="pf-setting-control" id="pf-long-minutes" type="number" min="1" max="120" inputmode="numeric" aria-label="Long break in minutes">
@@ -697,9 +695,7 @@
     const remaining = Math.max(0, Number(data.remaining_seconds) || 0);
     const remainingProgress = Math.max(0, Math.min(1, remaining / duration));
     const visualProgress = data.phase === "focus" ? 1 - remainingProgress : remainingProgress;
-    const indicator = ["line", "circle", "hidden"].includes(data.config.answer_timer_style)
-      ? data.config.answer_timer_style
-      : "line";
+    const indicator = data.config.answer_timer_style === "circle" ? "circle" : "line";
     const height = Math.max(36, Math.min(64, Number(data.config.answer_button_height) || 44));
     $(".pf-shell").style.setProperty("--pf-review-height", `${height}px`);
     timer.dataset.indicator = indicator;
@@ -709,7 +705,6 @@
     timer.querySelector(".pf-review-time").textContent = indicator === "circle"
       ? String(Math.ceil(remaining / 60))
       : mmss(remaining);
-    timer.querySelector(".pf-review-progress-fill").style.width = `${visualProgress * 100}%`;
     timer.querySelector(".pf-review-ring-fill").style.strokeDasharray = `${visualProgress * 87.5} 100`;
     scheduleReviewActionsPosition();
     scheduleLiquidGlass();
@@ -804,6 +799,7 @@
     snapshot = data;
     const shell = $(".pf-shell");
     shell.style.setProperty("--pf-ring", accentColor(data));
+    shell.classList.toggle("pf-custom-preset", data.config.preset === "custom");
     activeProgressStyle = data.config.progress_style === "circle" ? "circle" : "line";
     card.classList.toggle("pf-progress-circle", activeProgressStyle === "circle");
     const sizeControl = $("#pf-card-size");
@@ -856,7 +852,10 @@
     setControlValue($("#pf-daily-goal"), data.config.daily_goal);
     setControlValue($("#pf-card-size"), data.config.card_size);
     setControlValue($("#pf-progress-style"), activeProgressStyle);
-    setControlValue($("#pf-answer-timer-style"), data.config.answer_timer_style);
+    setControlValue(
+      $("#pf-answer-timer-style"),
+      data.config.answer_timer_style === "circle" ? "circle" : "line"
+    );
     setControlValue($("#pf-answer-button-height"), data.config.answer_button_height);
     $("#pf-answer-button-height-value").textContent = `${data.config.answer_button_height} px`;
     $("#pf-focus-hide").setAttribute("aria-checked", String(Boolean(data.config.focus_hide)));
