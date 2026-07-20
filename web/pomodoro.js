@@ -879,14 +879,25 @@
 
   function positionPanel() {
     if (!panelOpen) return;
-    const width = panel.offsetWidth || 372;
-    const height = panel.offsetHeight || Math.min(720, window.innerHeight - 24);
     if (answerBarMode) {
-      const reviewHeight = Math.max(36, Math.min(64, Number(snapshot?.config.answer_button_height) || 44));
-      panel.style.left = `${Math.max(VIEW_MARGIN, (window.innerWidth - width) / 2)}px`;
-      panel.style.top = `${Math.max(VIEW_MARGIN, window.innerHeight - height - reviewHeight - 28)}px`;
+      const anchor = $("#pf-review-timer");
+      const anchorRect = anchor.getBoundingClientRect();
+      const availableHeight = anchorRect.top - VIEW_MARGIN - 12;
+      panel.style.maxHeight = `${Math.max(160, Math.min(720, availableHeight))}px`;
+      const width = panel.offsetWidth || 380;
+      const height = panel.offsetHeight || Math.min(720, availableHeight);
+      const left = Math.max(
+        VIEW_MARGIN,
+        Math.min(window.innerWidth - width - VIEW_MARGIN, anchorRect.left)
+      );
+      const top = Math.max(VIEW_MARGIN, anchorRect.top - height - 12);
+      panel.style.left = `${left}px`;
+      panel.style.top = `${top}px`;
       return;
     }
+    panel.style.maxHeight = "";
+    const width = panel.offsetWidth || 380;
+    const height = panel.offsetHeight || Math.min(720, window.innerHeight - 24);
     const cardRect = card.getBoundingClientRect();
     let left = cardRect.left - width - 12;
     if (left < VIEW_MARGIN) left = cardRect.right + 12;
@@ -899,6 +910,7 @@
   function openPanel() {
     panelOpen = true;
     clearTimeout(hideTimer);
+    panel.scrollTop = 0;
     card.classList.remove("pf-focus-hidden");
     card.classList.add("pf-panel-open");
     panel.classList.add("pf-open");

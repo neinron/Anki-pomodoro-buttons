@@ -142,7 +142,7 @@ html.nightMode .pf-shell,
 }
 
 .pf-shell.pf-answer-bar-mode .pf-panel {
-  transform-origin: bottom center;
+  transform-origin: bottom left;
 }
 
 .pf-review-bar {
@@ -712,25 +712,40 @@ html.nightMode .pf-card,
 
 .pf-panel {
   position: fixed;
-  width: min(372px, calc(100vw - 24px));
+  width: min(380px, calc(100vw - 24px));
   max-height: min(720px, calc(100vh - 24px));
-  border: 1px solid var(--pf-border);
-  border-radius: 32px;
+  border: 1px solid color-mix(in srgb, var(--pf-text) 11%, rgba(255, 255, 255, .62));
+  border-radius: 30px;
   corner-shape: squircle;
   background:
-    radial-gradient(circle at 8% 0%, rgba(255,255,255,.48), transparent 29%),
-    var(--pf-glass-strong);
-  box-shadow: 0 28px 90px rgba(13, 15, 20, 0.28), 0 3px 16px rgba(13, 15, 20, 0.1), inset 0 1px 0 rgba(255,255,255,.45);
-  backdrop-filter: blur(32px) saturate(170%);
-  -webkit-backdrop-filter: blur(32px) saturate(170%);
+    radial-gradient(circle at 9% -2%, rgba(255, 255, 255, .58), transparent 31%),
+    linear-gradient(155deg, rgba(255, 255, 255, .2), transparent 38%),
+    color-mix(in srgb, var(--pf-glass-strong) 94%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .68),
+    inset 1px 0 0 rgba(255, 255, 255, .24),
+    inset 0 -1px 0 color-mix(in srgb, var(--pf-text) 14%, transparent),
+    0 24px 70px rgba(13, 15, 20, .24),
+    0 4px 16px rgba(13, 15, 20, .12);
+  backdrop-filter: blur(40px) saturate(158%) contrast(1.025);
+  -webkit-backdrop-filter: blur(40px) saturate(158%) contrast(1.025);
   pointer-events: auto;
   overflow: auto;
   overscroll-behavior: contain;
+  scrollbar-width: none;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(8px) scale(.975);
+  transform: translateY(12px) scale(.965);
   transform-origin: top right;
-  transition: opacity 180ms ease, transform 220ms cubic-bezier(.2,.8,.2,1), visibility 180ms;
+  transition:
+    opacity 160ms ease,
+    transform 260ms cubic-bezier(.2, .85, .2, 1),
+    visibility 160ms;
+}
+
+.pf-panel::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .pf-panel.pf-open {
@@ -740,7 +755,7 @@ html.nightMode .pf-card,
 }
 
 .pf-panel-inner {
-  padding: 22px;
+  padding: 20px;
 }
 
 .pf-timer-header {
@@ -748,15 +763,15 @@ html.nightMode .pf-card,
   grid-template-columns: 1fr auto;
   gap: 16px;
   align-items: center;
-  padding: 0 0 7px;
+  padding: 1px 0 6px;
 }
 
 .pf-product-title {
   margin: 0;
-  font-size: 22px;
+  font-size: 21px;
   line-height: 1.08;
-  font-weight: 650;
-  letter-spacing: -.02em;
+  font-weight: 660;
+  letter-spacing: -.025em;
 }
 
 .pf-session-meta {
@@ -764,9 +779,9 @@ html.nightMode .pf-card,
   align-items: center;
   gap: 6px;
   min-height: 18px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   color: var(--pf-secondary);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 520;
 }
 
@@ -788,10 +803,10 @@ html.nightMode .pf-card,
 }
 
 .pf-exact-time {
-  font-size: 34px;
+  font-size: 32px;
   line-height: 1;
-  font-weight: 520;
-  letter-spacing: -1.7px;
+  font-weight: 620;
+  letter-spacing: -1.45px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -799,7 +814,7 @@ html.nightMode .pf-card,
   display: grid;
   width: 100%;
   grid-template-columns: 44px minmax(0, 1fr) 44px;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
 }
 
@@ -815,9 +830,9 @@ html.nightMode .pf-card,
   background: transparent;
   color: var(--pf-text);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1;
-  font-weight: 650;
+  font-weight: 600;
   box-shadow: none !important;
   cursor: pointer;
   display: inline-flex;
@@ -859,7 +874,7 @@ html.nightMode .pf-card,
   justify-self: center;
   padding: 0 16px;
   border-radius: 999px;
-  corner-shape: squircle;
+  corner-shape: round;
   background: var(--pf-ring);
   color: white;
   box-shadow: none !important;
@@ -873,7 +888,7 @@ html.nightMode .pf-card,
   width: 100%;
   max-width: none;
   border-radius: 999px;
-  corner-shape: squircle;
+  corner-shape: round;
 }
 
 .pf-icon {
@@ -907,8 +922,8 @@ html.nightMode .pf-card,
 .pf-metrics {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  margin-top: 18px;
-  padding: 15px 0;
+  margin-top: 16px;
+  padding: 14px 0;
   border-top: 1px solid var(--pf-divider);
   border-bottom: 1px solid var(--pf-divider);
 }
@@ -923,8 +938,8 @@ html.nightMode .pf-card,
 }
 
 .pf-metric-value {
-  font-size: 18px;
-  font-weight: 650;
+  font-size: 19px;
+  font-weight: 660;
   letter-spacing: -.02em;
 }
 
@@ -953,11 +968,11 @@ html.nightMode .pf-card,
 
 .pf-settings {
   position: relative;
-  border-radius: 22px;
+  border-radius: 20px;
   corner-shape: squircle;
-  background: color-mix(in srgb, var(--pf-control) 74%, transparent);
-  border: 0;
-  box-shadow: none !important;
+  background: color-mix(in srgb, var(--pf-control) 76%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pf-text) 5%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 18%, transparent) !important;
   overflow: visible;
 }
 
@@ -966,36 +981,36 @@ html.nightMode .pf-card,
 }
 
 .pf-settings + .pf-settings {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .pf-metrics + .pf-settings {
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 .pf-setting-row,
 .pf-row-button {
-  min-height: 50px;
+  min-height: 48px;
   display: grid;
   grid-template-columns: 21px minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  padding: 0 13px;
+  padding: 0 12px;
   border-bottom: 1px solid var(--pf-divider);
 }
 
 .pf-setting-row:last-child,
 .pf-row-button:last-child {
   border-bottom: 0;
-  border-bottom-right-radius: 22px;
-  border-bottom-left-radius: 22px;
+  border-bottom-right-radius: 20px;
+  border-bottom-left-radius: 20px;
   corner-shape: squircle;
 }
 
 .pf-setting-row:first-child,
 .pf-row-button:first-child {
-  border-top-left-radius: 22px;
-  border-top-right-radius: 22px;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
   corner-shape: squircle;
 }
 
@@ -1013,27 +1028,27 @@ html.nightMode .pf-card,
 }
 
 .pf-setting-icon .pf-icon {
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
 }
 
 .pf-setting-label {
   min-width: 0;
-  font-size: 13px;
-  font-weight: 540;
+  font-size: 14px;
+  font-weight: 550;
 }
 
 .pf-setting-control {
-  height: 32px;
+  height: 34px;
   max-width: 132px;
   padding: 0 9px;
-  border: 0;
-  border-radius: 16px;
-  corner-shape: squircle;
+  border: 1px solid color-mix(in srgb, var(--pf-text) 5%, transparent);
+  border-radius: 17px;
+  corner-shape: round;
   background: color-mix(in srgb, var(--pf-control) 86%, transparent);
   color: var(--pf-text);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 560;
   text-align: right;
 }
@@ -1073,9 +1088,9 @@ input[type="number"].pf-setting-control {
   gap: 7px;
   align-items: center;
   padding: 0 9px 0 11px;
-  border: 1px solid transparent;
+  border: 1px solid color-mix(in srgb, var(--pf-text) 5%, transparent);
   border-radius: 17px;
-  corner-shape: squircle;
+  corner-shape: round;
   background: color-mix(in srgb, var(--pf-control) 88%, transparent);
   text-align: left;
   box-shadow: none;
@@ -1100,7 +1115,7 @@ input[type="number"].pf-setting-control {
   min-width: 0;
   overflow: hidden;
   color: var(--pf-text);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 580;
   line-height: 1;
   text-overflow: ellipsis;
@@ -1131,13 +1146,19 @@ input[type="number"].pf-setting-control {
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  border: 1px solid var(--pf-border);
-  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--pf-text) 11%, rgba(255, 255, 255, .58));
+  border-radius: 20px;
   corner-shape: squircle;
-  background: var(--pf-glass-strong);
-  box-shadow: 0 16px 42px rgba(13, 15, 20, .2), 0 2px 8px rgba(13, 15, 20, .08);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, .24), transparent 42%),
+    color-mix(in srgb, var(--pf-glass-strong) 94%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .58),
+    inset 0 -1px 0 color-mix(in srgb, var(--pf-text) 12%, transparent),
+    0 16px 42px rgba(13, 15, 20, .2),
+    0 2px 8px rgba(13, 15, 20, .08);
+  backdrop-filter: blur(32px) saturate(155%);
+  -webkit-backdrop-filter: blur(32px) saturate(155%);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -1162,15 +1183,16 @@ input[type="number"].pf-setting-control {
 
 .pf-select-option {
   width: 100%;
-  min-height: 34px;
+  min-height: 36px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 15px;
   gap: 10px;
   align-items: center;
   padding: 0 8px 0 10px;
-  border-radius: 9px;
+  border-radius: 12px;
+  corner-shape: squircle;
   background: transparent;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 540;
   line-height: 1.2;
   text-align: left;
@@ -1296,7 +1318,7 @@ input[type="number"].pf-setting-control {
 
 .pf-row-value {
   color: var(--pf-secondary);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .pf-danger {
