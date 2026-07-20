@@ -424,7 +424,7 @@
     shell.classList.toggle("pf-liquid-svg-supported", supportsSvgBackdrop);
     if (!supportsSvgBackdrop || !answerBarMode) return;
 
-    root.querySelectorAll(".pf-review-control, .pf-review-count-card").forEach((element) => {
+    root.querySelectorAll(".pf-review-control, .pf-review-counts").forEach((element) => {
       const bounds = element.getBoundingClientRect();
       if (bounds.width < 1 || bounds.height < 1) return;
       const radius = Number(getComputedStyle(element).borderRadius.replace("px", "")) || bounds.height / 4;
@@ -769,6 +769,11 @@
     $("#pf-review-new").textContent = values.new || "0";
     $("#pf-review-learn").textContent = values.learn || "0";
     $("#pf-review-due").textContent = values.review || "0";
+    if (["new", "learn", "review"].includes(values.active)) {
+      counts.dataset.active = values.active;
+    } else {
+      delete counts.dataset.active;
+    }
     ["new", "learn", "review"].forEach((kind) => {
       const id = kind === "review" ? "#pf-review-due" : `#pf-review-${kind}`;
       $(id).classList.toggle("pf-review-current", values.active === kind);
