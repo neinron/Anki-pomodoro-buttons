@@ -47,6 +47,11 @@
   --pf-review-height: 44px;
   --pf-review-control-radius: calc(var(--pf-review-height) / 2);
   --pf-review-square-radius: clamp(13px, calc(var(--pf-review-height) * .36), 23px);
+  --pf-review-label-size: clamp(13px, calc(9.4px + var(--pf-review-height) * .1), 16px);
+  --pf-review-number-size: clamp(13px, calc(7.2px + var(--pf-review-height) * .16), 18px);
+  --pf-review-timer-size: clamp(15px, calc(10.6px + var(--pf-review-height) * .12), 19px);
+  --pf-review-caption-size: clamp(9px, calc(6.1px + var(--pf-review-height) * .085), 12px);
+  --pf-review-icon-size: clamp(18px, calc(11px + var(--pf-review-height) * .23), 25px);
   --pf-liquid-highlight: rgba(255, 255, 255, .7);
   --pf-liquid-highlight-soft: rgba(255, 255, 255, .16);
   --pf-liquid-shadow: rgba(12, 16, 24, .12);
@@ -247,9 +252,10 @@ html.nightMode .pf-shell,
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
-  font-weight: 650;
+  font-size: var(--pf-review-label-size);
+  font-weight: 600;
   line-height: 1;
+  letter-spacing: -.01em;
   transition:
     transform 260ms cubic-bezier(.34, 1.56, .64, 1),
     background-color 140ms ease,
@@ -274,8 +280,8 @@ html.nightMode .pf-shell,
 
 .pf-sf-symbol {
   display: block;
-  width: clamp(17px, calc(var(--pf-review-height) * .34), 22px);
-  height: clamp(17px, calc(var(--pf-review-height) * .34), 22px);
+  width: var(--pf-review-icon-size);
+  height: var(--pf-review-icon-size);
   flex: 0 0 auto;
   background: currentColor;
   -webkit-mask-repeat: no-repeat;
@@ -298,7 +304,7 @@ html.nightMode .pf-shell,
 }
 
 .pf-sf-ellipsis {
-  width: clamp(18px, calc(var(--pf-review-height) * .38), 24px);
+  width: clamp(21px, calc(11px + var(--pf-review-height) * .27), 28px);
   -webkit-mask-image: url("icons/ellipsis.png");
   mask-image: url("icons/ellipsis.png");
 }
@@ -348,8 +354,10 @@ html.nightMode .pf-shell,
     0 10px 26px rgba(18, 20, 24, .08);
   backdrop-filter: blur(18px) saturate(150%);
   -webkit-backdrop-filter: blur(18px) saturate(150%);
-  font-size: clamp(12px, calc(var(--pf-review-height) * .27), 16px);
+  font-size: var(--pf-review-number-size);
   font-weight: 700;
+  line-height: 1;
+  letter-spacing: -.02em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -372,10 +380,11 @@ html.nightMode .pf-shell,
 }
 
 .pf-review-due-label {
-  margin-top: 4px;
+  margin-top: clamp(2px, calc(var(--pf-review-height) * .055), 4px);
   color: var(--pf-secondary);
-  font-size: 10px;
+  font-size: var(--pf-review-caption-size);
   font-weight: 520;
+  letter-spacing: 0;
 }
 
 .pf-review-ease-1 {
@@ -433,7 +442,7 @@ html.nightMode .pf-shell,
 .pf-review-time {
   position: relative;
   z-index: 1;
-  font-size: 16px;
+  font-size: var(--pf-review-timer-size);
   font-weight: 700;
   line-height: 1;
   letter-spacing: -.35px;
@@ -495,7 +504,7 @@ html.nightMode .pf-shell,
 }
 
 .pf-review-timer[data-indicator="circle"] .pf-review-time {
-  font-size: clamp(15px, calc(var(--pf-review-height) * .42), 24px);
+  font-size: clamp(15px, calc(8px + var(--pf-review-height) * .24), 23px);
   letter-spacing: -.5px;
 }
 
