@@ -267,9 +267,40 @@ html.nightMode .pf-shell,
 }
 
 .pf-review-utility {
-  width: auto;
-  min-width: 60px;
-  padding: 0 12px;
+  width: var(--pf-review-height);
+  min-width: var(--pf-review-height);
+  padding: 0;
+}
+
+.pf-sf-symbol {
+  display: block;
+  width: clamp(17px, calc(var(--pf-review-height) * .34), 22px);
+  height: clamp(17px, calc(var(--pf-review-height) * .34), 22px);
+  flex: 0 0 auto;
+  background: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  pointer-events: none;
+}
+
+.pf-sf-square-and-pencil {
+  -webkit-mask-image: url("icons/square-and-pencil.png");
+  mask-image: url("icons/square-and-pencil.png");
+}
+
+.pf-sf-info-circle {
+  -webkit-mask-image: url("icons/info-circle.png");
+  mask-image: url("icons/info-circle.png");
+}
+
+.pf-sf-ellipsis {
+  width: clamp(18px, calc(var(--pf-review-height) * .38), 24px);
+  -webkit-mask-image: url("icons/ellipsis.png");
+  mask-image: url("icons/ellipsis.png");
 }
 
 .pf-review-counts {
@@ -492,7 +523,7 @@ html.nightMode .pf-shell,
 @media (max-width: 1100px) {
   .pf-review-bar { right: 10px; left: 10px; }
   .pf-review-edge, .pf-review-actions { gap: 6px; }
-  .pf-review-utility { width: auto; min-width: 52px; padding: 0 8px; }
+  .pf-review-utility { width: var(--pf-review-height); min-width: var(--pf-review-height); padding: 0; }
   .pf-review-counts { width: auto; padding: 0; gap: 4px; }
   .pf-review-answer { width: 82px; min-width: 82px; padding: 0 8px; }
   .pf-review-timer { flex-basis: 82px; width: 82px; min-width: 82px; }
@@ -501,7 +532,7 @@ html.nightMode .pf-shell,
 @media (max-width: 900px) {
   .pf-review-bar { right: 8px; left: 8px; }
   .pf-review-edge, .pf-review-actions { gap: 4px; }
-  .pf-review-utility { min-width: 48px; padding-right: 6px; padding-left: 6px; font-size: 12px; }
+  .pf-review-utility { width: var(--pf-review-height); min-width: var(--pf-review-height); padding: 0; }
   .pf-review-answer { width: 76px; min-width: 76px; padding-right: 6px; padding-left: 6px; font-size: 12px; }
   .pf-review-timer { flex-basis: 76px; width: 76px; min-width: 76px; padding-right: 9px; padding-left: 9px; }
 }

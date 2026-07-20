@@ -155,9 +155,15 @@
         </div>
         <div class="pf-review-actions" id="pf-review-actions"></div>
         <div class="pf-review-edge pf-review-right">
-          <button class="pf-review-control pf-review-utility" id="pf-review-edit" type="button">Edit</button>
-          <button class="pf-review-control pf-review-utility" id="pf-review-info" type="button">Info</button>
-          <button class="pf-review-control pf-review-utility" id="pf-review-more" type="button">More</button>
+          <button class="pf-review-control pf-review-utility" id="pf-review-edit" type="button" aria-label="Edit" title="Edit">
+            <span class="pf-sf-symbol pf-sf-square-and-pencil" aria-hidden="true"></span>
+          </button>
+          <button class="pf-review-control pf-review-utility" id="pf-review-info" type="button" aria-label="Info" title="Info">
+            <span class="pf-sf-symbol pf-sf-info-circle" aria-hidden="true"></span>
+          </button>
+          <button class="pf-review-control pf-review-utility" id="pf-review-more" type="button" aria-label="More" title="More">
+            <span class="pf-sf-symbol pf-sf-ellipsis" aria-hidden="true"></span>
+          </button>
         </div>
       </div>
 
@@ -748,8 +754,12 @@
     if (!layout || !["question", "answer"].includes(layout.side)) return;
     const priorCounts = studyActions?.counts;
     studyActions = layout;
-    $("#pf-review-edit").textContent = layout.edit_label || "Edit";
-    $("#pf-review-more").textContent = layout.more_label || "More";
+    const editLabel = layout.edit_label || "Edit";
+    const moreLabel = layout.more_label || "More";
+    $("#pf-review-edit").setAttribute("aria-label", editLabel);
+    $("#pf-review-edit").title = editLabel;
+    $("#pf-review-more").setAttribute("aria-label", moreLabel);
+    $("#pf-review-more").title = moreLabel;
     const actions = $("#pf-review-actions");
     actions.replaceChildren();
     const counts = $("#pf-review-counts");
